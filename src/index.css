@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&family=Comfortaa:wght@500;600;700&display=swap');
+
+:root {
+  --color-text: #4a3128;
+  --color-text-muted: #7a5a4c;
+  --color-accent-strong: #a95f34;
+  --font-display: 'Comfortaa', sans-serif;
+  --font-body: 'Cabin', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  min-width: 320px;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: #eadccf;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  color: var(--color-text);
+}
+
+button {
+  appearance: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
