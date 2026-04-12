@@ -1,54 +1,64 @@
-import { Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { useDeferredValue, useState } from 'react';
+import { Plus, Search } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SectionCard from '../components/SectionCard';
+import { formatCurrency } from '../lib/calculations';
 
-function IngredientsScreen({ data }) {
+function IngredientsScreen({ rawIngredients, onCreateIngredient, onEditIngredient }) {
+  const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
+
+  const filteredIngredients = rawIngredients.filter((item) => {
+    const needle = deferredQuery.trim().toLowerCase();
+    return (
+      item.name.toLowerCase().includes(needle) ||
+      item.category.toLowerCase().includes(needle) ||
+      item.purchaseLabel.toLowerCase().includes(needle)
+    );
+  });
+
   return (
     <div className="screen">
       <PageHeader
         eyebrow="Achats"
         title="Matières"
-        meta={`${data.rawIngredients.length} références`}
+        meta={`${rawIngredients.length} références modifiables`}
         action={
-          <button type="button" className="icon-button" aria-label="Ajouter une matière première">
+          <button type="button" className="icon-button" onClick={onCreateIngredient} aria-label="Ajouter un achat">
             <Plus size={18} />
           </button>
         }
       />
 
-      <div className="screen-body screen-body--list">
-        <SectionCard className="compact-card">
-          <div className="search-shell">
-            <div className="search-field">
-              <Search size={15} />
-              <span>Rechercher</span>
-            </div>
-            <button type="button" className="filter-button" aria-label="Filtres">
-              <SlidersHorizontal size={16} />
-            </button>
-          </div>
+      <div className="screen-body">
+        <SectionCard className="search-card">
+          <label className="search-input">
+            <Search size={16} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Chercher une matière première"
+            />
+          </label>
         </SectionCard>
 
-        <SectionCard title="Tarifs" className="list-card">
-          <div className="ledger-list">
-            {data.rawIngredients.map((ingredient) => (
-              <button key={ingredient.id} type="button" className="ledger-row">
-                <div className="ledger-row__main">
-                  <strong>{ingredient.name}</strong>
-                  <span>{ingredient.category}</span>
+        <SectionCard title="Tarifs" subtitle="Prix normalisés pour le calcul direct.">
+          <div className="list-stack">
+            {filteredIngredients.map((item) => (
+              <button key={item.id} type="button" className="list-row" onClick={() => onEditIngredient(item)}>
+                <div className="list-row__main">
+                  <strong>{item.name}</strong>
+                  <span>
+                    {item.category} · {item.purchaseLabel}
+                  </span>
                 </div>
-                <div className="ledger-row__side">
-                  <span>{ingredient.unitType}</span>
-                  <strong>{ingredient.defaultUnitPrice.toFixed(2)} €</strong>
+
+                <div className="list-row__metrics">
+                  <span>{item.pricingUnit}</span>
+                  <strong>{formatCurrency(item.normalizedUnitPrice)}</strong>
                 </div>
               </button>
             ))}
-          </div>
-
-          <div className="footer-strip">
-            <div className="footer-strip__item">
-              <span>Beurre, farine, chocolat, crème, fruits secs</span>
-            </div>
           </div>
         </SectionCard>
       </div>

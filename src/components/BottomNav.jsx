@@ -1,21 +1,23 @@
+import { createElement } from 'react';
+
 function BottomNav({ activeTab, items, onChange }) {
   return (
     <nav className="bottom-nav" aria-label="Navigation principale">
-      {items.map(({ id, label, icon: Icon }) => {
-        const isActive = activeTab === id;
+      {items.map((item) => {
+        const isActive = activeTab === item.id;
 
         return (
           <button
-            key={id}
+            key={item.id}
             type="button"
             aria-current={isActive ? 'page' : undefined}
             className={`bottom-nav__item ${isActive ? 'is-active' : ''}`}
-            onClick={() => onChange(id)}
+            onClick={() => onChange(item.id)}
           >
             <span className="bottom-nav__icon">
-              <Icon size={18} strokeWidth={2.3} />
+              {createElement(item.icon, { size: 18, strokeWidth: 2.3 })}
             </span>
-            <span>{label}</span>
+            <span>{item.label}</span>
           </button>
         );
       })}
