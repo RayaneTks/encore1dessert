@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import logo from './assets/logo.png';
+import appleIcon from './assets/apple-touch-icon.png';
 import {
   appSettings,
   desserts,
@@ -9,6 +10,7 @@ import {
   rawIngredients,
 } from './data/appData';
 import BottomNav from './components/BottomNav';
+import InstallGate from './components/InstallGate';
 import CalculateScreen from './screens/CalculateScreen';
 import DessertsScreen from './screens/DessertsScreen';
 import IngredientsScreen from './screens/IngredientsScreen';
@@ -25,6 +27,33 @@ const screens = {
 
 function App() {
   const [activeTab, setActiveTab] = useState('calculate');
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  const isLocal = useMemo(() => {
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+  }, []);
+
+  const isIos = useMemo(() => {
+    const platform = window.navigator.userAgent;
+    return /iPhone|iPad|iPod/i.test(platform);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia('(display-mode: standalone)');
+    const updateMode = () => {
+      setIsStandalone(Boolean(window.navigator.standalone) || media.matches || isLocal);
+    };
+
+    updateMode();
+    media.addEventListener('change', updateMode);
+    window.addEventListener('focus', updateMode);
+
+    return () => {
+      media.removeEventListener('change', updateMode);
+      window.removeEventListener('focus', updateMode);
+    };
+  }, [isLocal]);
 
   const Screen = screens[activeTab];
   const data = {
@@ -50,6 +79,7 @@ function App() {
         </main>
 
         <BottomNav activeTab={activeTab} items={navigationItems} onChange={setActiveTab} />
+        <InstallGate appleIcon={appleIcon} isIos={isIos} isStandalone={isStandalone} />
       </div>
     </div>
   );

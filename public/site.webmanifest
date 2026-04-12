@@ -1,0 +1,21 @@
+{
+  "name": "Encore1Dessert",
+  "short_name": "Encore1",
+  "description": "Calculateur prive de cout de revient Encore1Dessert.",
+  "display": "standalone",
+  "background_color": "#f8eee5",
+  "theme_color": "#f8eee5",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
