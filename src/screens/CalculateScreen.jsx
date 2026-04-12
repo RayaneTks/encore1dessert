@@ -28,16 +28,14 @@ function CalculateScreen({ data }) {
 
           <div className="hero-panel__fields">
             <div className="field-tile">
-              <span>Dessert</span>
-              <strong>{spotlight.name}</strong>
-            </div>
-            <div className="field-tile">
               <Scale size={15} />
-              <span>{spotlight.targetWeight} g</span>
+              <span>Poids</span>
+              <strong>{spotlight.targetWeight} g</strong>
             </div>
             <div className="field-tile">
               <WalletCards size={15} />
-              <span>{spotlight.servings} parts</span>
+              <span>Parts</span>
+              <strong>{spotlight.servings}</strong>
             </div>
           </div>
 
@@ -61,16 +59,16 @@ function CalculateScreen({ data }) {
 
         <div className="split-stack">
           <SectionCard title="Sources" className="compact-card">
-            <div className="source-grid">
-              <div className="source-chip">
+            <div className="source-list">
+              <div className="source-row">
                 <span>Achats</span>
                 <strong>{data.rawIngredients.length}</strong>
               </div>
-              <div className="source-chip">
-                <span>Bases</span>
+              <div className="source-row">
+                <span>Bases maison</span>
                 <strong>{data.preparedComponents.length}</strong>
               </div>
-              <div className="source-chip">
+              <div className="source-row">
                 <span>Desserts</span>
                 <strong>{data.desserts.length}</strong>
               </div>

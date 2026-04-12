@@ -32,7 +32,10 @@ body {
   min-width: 320px;
   font-family: var(--font-body);
   color: var(--color-text);
-  background: #eadccf;
+  background:
+    radial-gradient(circle at top left, rgba(246, 114, 149, 0.08), transparent 24%),
+    radial-gradient(circle at top right, rgba(227, 164, 109, 0.12), transparent 30%),
+    linear-gradient(180deg, #f3e5d8 0%, #efe0d1 100%);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
