@@ -61,16 +61,16 @@ function CalculateScreen({ data }) {
 
         <div className="split-stack">
           <SectionCard title="Sources" className="compact-card">
-            <div className="token-row">
-              <div className="mini-stat">
+            <div className="source-grid">
+              <div className="source-chip">
                 <span>Achats</span>
                 <strong>{data.rawIngredients.length}</strong>
               </div>
-              <div className="mini-stat">
+              <div className="source-chip">
                 <span>Bases</span>
                 <strong>{data.preparedComponents.length}</strong>
               </div>
-              <div className="mini-stat">
+              <div className="source-chip">
                 <span>Desserts</span>
                 <strong>{data.desserts.length}</strong>
               </div>
