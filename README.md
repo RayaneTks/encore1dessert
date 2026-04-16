@@ -1,16 +1,42 @@
-# React + Vite
+# Encore 1 Dessert - Cost Calculator 🍩
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Une application professionnelle de calcul de coût de revient pour pâtissiers et restaurateurs. Conçue avec une approche mobile-first et une esthétique "Apple Gourmand".
 
-Currently, two official plugins are available:
+## 🚀 Fonctionnalités
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Calcul de Marge en Temps Réel** : Visualisez instantanément l'impact de vos ventes sur votre rentabilité.
+- **Gestion des Matières Brutes** : Base de données complète de vos ingrédients avec mise à jour des prix.
+- **Fiches Techniques Modulaires** : Créez des bases (pâtes, crèmes) et combinez-les dans vos produits finis.
+- **Comptabilité Simplifiée** : Historique des ventes et analyse du chiffre d'affaires et des bénéfices.
+- **Persistence Locale** : Vos données sont sauvegardées en toute sécurité dans votre navigateur.
 
-## React Compiler
+## 🛠️ Stack Technique
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Framework** : React + Vite
+- **Langage** : TypeScript
+- **Styling** : Tailwind CSS v4
+- **Animations** : Framer Motion
+- **Icônes** : Lucide React
 
-## Expanding the ESLint configuration
+## 📦 Installation
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Clonez le dépôt
+2. Installez les dépendances :
+   ```bash
+   npm install
+   ```
+3. Lancez le serveur de développement :
+   ```bash
+   npm run dev
+   ```
+
+## 🎨 Direction Artistique
+
+Le projet utilise une palette de couleurs inspirée de la pâtisserie haut de gamme :
+- **Chocolate** : `#2D1B12` (Texte & Identité)
+- **Strawberry** : `#E94E4E` (Actions & Contrastes)
+- **Biscuit/Gold** : `#C89666` (Accents)
+- **Cream** : `#F5F2ED` (Arrière-plan)
+
+---
+*Fait avec passion pour Encore 1 Dessert.*

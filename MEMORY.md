@@ -1,0 +1,1 @@
+- [Project Encore1Dessert (iOS Utility App)](memory/project_encore_utility.md) — Core design and functional goals for an iOS utility replacement for Excel.

@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
 
 # Editor directories and files
 .vscode/*
@@ -23,7 +24,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local design references / agent helpers
+# Design references / agent helpers
 .skills/
 brouillon_DA/
-Nouveau dossier/
+encore1dessert-rework-version/
