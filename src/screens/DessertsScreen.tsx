@@ -11,15 +11,17 @@ interface Props {
   desserts: Dessert[];
   ingredients: RawIngredient[];
   bases: Base[];
-  setDesserts: React.Dispatch<React.SetStateAction<Dessert[]>>;
+  onSave: (dessert: Dessert) => Promise<Dessert | null>;
+  onDelete: (id: string) => Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, setDesserts, showToast }) => {
+export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, onSave, onDelete, showToast }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Dessert | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Dessert | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -47,39 +49,35 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
     setShowForm(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!name) return;
     const components = Object.entries(compMap)
       .filter(([, v]) => v.qty > 0)
       .map(([id, v]) => ({ type: v.type, id, quantity: v.qty }));
     if (components.length === 0) return;
 
-    if (editItem) {
-      setDesserts(prev => prev.map(d =>
-        d.id === editItem.id ? {
-          ...d, name, sellPrice: parseFloat(sellPrice) || 0,
-          servings: parseInt(servings) || 1, notes, components,
-        } : d
-      ));
-      showToast(`${name} mis à jour`);
-    } else {
-      const newDessert: Dessert = {
-        id: 'dessert-' + Date.now(),
-        name, emoji: '🍰',
-        sellPrice: parseFloat(sellPrice) || 0,
-        servings: parseInt(servings) || 1,
-        notes, components,
-        createdAt: new Date().toISOString(),
-      };
-      setDesserts(prev => [...prev, newDessert]);
-      showToast(`${name} créé`);
+    setSaving(true);
+    const dessert: Dessert = {
+      id: editItem?.id || 'dessert-' + Date.now(),
+      name, emoji: '🍰',
+      sellPrice: parseFloat(sellPrice) || 0,
+      servings: parseInt(servings) || 1,
+      notes, components,
+      createdAt: editItem?.createdAt || new Date().toISOString(),
+    };
+
+    const result = await onSave(dessert);
+    setSaving(false);
+
+    if (result) {
+      showToast(editItem ? `${name} mis à jour` : `${name} créé`);
+      setShowForm(false);
     }
-    setShowForm(false);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setDesserts(prev => prev.filter(d => d.id !== deleteTarget.id));
+    await onDelete(deleteTarget.id);
     showToast(`${deleteTarget.name} supprimé`, 'info');
     setDeleteTarget(null);
     setExpandedId(null);
@@ -96,14 +94,10 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
     Object.entries(compMap).forEach(([id, c]) => {
        if (c.type === 'ingredient') {
           const ing = findIngredient(ingredients, id);
-          if (ing) {
-              cost += ing.unit === 'u' ? (ing.pricePerKg * c.qty) : (ing.pricePerKg * c.qty / 1000);
-          }
+          if (ing) cost += ing.unit === 'u' ? (ing.pricePerKg * c.qty) : (ing.pricePerKg * c.qty / 1000);
        } else {
           const base = findBase(bases, id);
-          if (base) {
-              cost += (calculateBaseCostPerKg(base, ingredients) * c.qty / 1000);
-          }
+          if (base) cost += (calculateBaseCostPerKg(base, ingredients) * c.qty / 1000);
        }
     });
     return cost;
@@ -141,7 +135,6 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
           return (
             <div key={d.id} className="gourmand-card overflow-hidden">
-              {/* Header */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : d.id)}
                 className="w-full p-4 flex justify-between items-center hover:bg-gourmand-bg/50 transition-colors text-left"
@@ -166,17 +159,10 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                 </div>
               </button>
 
-              {/* Detail */}
               <AnimatePresence>
                 {isExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="px-4 pb-4 space-y-4 border-t border-gourmand-border pt-3 mt-1">
-                      {/* KPIs */}
                       <div className="grid grid-cols-3 gap-2">
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
                           <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coût unitaire</p>
@@ -192,7 +178,6 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                         </div>
                       </div>
 
-                      {/* Composition */}
                       <div className="bg-gourmand-bg rounded-xl p-4">
                         <p className="text-[10px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3">Composition technique</p>
                         <div className="space-y-2.5">
@@ -229,15 +214,9 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
                       {d.notes && <p className="text-xs text-gourmand-cocoa bg-gourmand-bg/50 p-3 rounded-xl">{d.notes}</p>}
 
-                      {/* Actions */}
                       <div className="flex gap-2 pt-1">
-                        <button onClick={() => openEdit(d)} className="flex-1 gourmand-btn-primary py-3">
-                          Modifier
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(d)}
-                          className="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center transition-colors hover:bg-red-100"
-                        >
+                        <button onClick={() => openEdit(d)} className="flex-1 gourmand-btn-primary py-3">Modifier</button>
+                        <button onClick={() => setDeleteTarget(d)} className="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors">
                           <Trash2 size={18} />
                         </button>
                       </div>
@@ -259,7 +238,6 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
         )}
       </div>
 
-      {/* Add/Edit Form */}
       <AnimatePresence>
         {showForm && (
           <Modal onClose={() => setShowForm(false)} title={editItem ? 'Éditer' : 'Nouvelle Recette'}>
@@ -267,7 +245,6 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
               <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-32 scrollbar-hide">
                 <div className="space-y-4">
                   <input placeholder="Nom du produit" className="gourmand-input w-full text-base" value={name} onChange={e => setName(e.target.value)} />
-                  
                   <div className="flex gap-3">
                     <div className="flex-1">
                       <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Prix de vente (€)</p>
@@ -280,53 +257,35 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                   </div>
                 </div>
 
-                {/* Bases */}
                 {bases.length > 0 && (
                   <div>
-                    <h4 className="text-[11px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2">
-                       <Beaker size={14} /> Bases maison (g)
-                    </h4>
+                    <h4 className="text-[11px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2"><Beaker size={14} /> Bases maison (g)</h4>
                     <div className="space-y-2">
-                      {bases.map(b => {
-                        const val = compMap[b.id]?.qty || 0;
-                        return (
-                          <div key={b.id} className="flex items-center justify-between p-3 bg-gourmand-bg rounded-xl">
-                            <span className="text-sm font-medium">{b.name}</span>
-                            <div className="flex items-center gap-2">
-                              <input type="number" placeholder="0" value={val || ''}
-                                className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate shadow-sm transition-colors"
-                                onChange={e => {
-                                  const qty = parseFloat(e.target.value) || 0;
-                                  setCompMap(prev => ({ ...prev, [b.id]: { type: 'base', qty } }));
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {bases.map(b => (
+                        <div key={b.id} className="flex items-center justify-between p-3 bg-gourmand-bg rounded-xl">
+                          <span className="text-sm font-medium">{b.name}</span>
+                          <input type="number" placeholder="0" value={compMap[b.id]?.qty || ''}
+                            className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate"
+                            onChange={e => setCompMap(prev => ({ ...prev, [b.id]: { type: 'base', qty: parseFloat(e.target.value) || 0 } }))}
+                          />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {/* Ingredients */}
                 <div>
-                  <h4 className="text-[11px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2">
-                     <Apple size={14} /> Matières premières
-                  </h4>
+                  <h4 className="text-[11px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2"><Apple size={14} /> Matières premières</h4>
                   <div className="space-y-2">
                     {ingredients.map(i => {
-                      const val = compMap[i.id]?.qty || 0;
                       const iUnit = i.unit === 'u' ? 'u' : i.unit === 'L' ? 'ml' : 'g';
                       return (
                         <div key={i.id} className="flex items-center justify-between p-3 bg-gourmand-bg rounded-xl">
                           <span className="text-sm font-medium">{i.name}</span>
                           <div className="flex items-center gap-2">
-                            <input type="number" placeholder="0" value={val || ''}
-                              className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate shadow-sm transition-colors"
-                              onChange={e => {
-                                const qty = parseFloat(e.target.value) || 0;
-                                setCompMap(prev => ({ ...prev, [i.id]: { type: 'ingredient', qty } }));
-                              }}
+                            <input type="number" placeholder="0" value={compMap[i.id]?.qty || ''}
+                              className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate"
+                              onChange={e => setCompMap(prev => ({ ...prev, [i.id]: { type: 'ingredient', qty: parseFloat(e.target.value) || 0 } }))}
                             />
                             <span className="text-xs font-medium text-gourmand-biscuit w-4">{iUnit}</span>
                           </div>
@@ -335,28 +294,22 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                     })}
                   </div>
                 </div>
-
-                <div>
-                  <textarea placeholder="Notes techniques (optionnel)" className="gourmand-input w-full resize-none h-24 text-sm" value={notes} onChange={e => setNotes(e.target.value)} />
-                </div>
+                <textarea placeholder="Notes techniques..." className="gourmand-input w-full resize-none h-24 text-sm" value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
 
-              {/* Sticky Real-Time Cost Footer */}
               <div className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gourmand-border shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-b-3xl">
                 <div className="flex justify-between items-center mb-3 px-2">
                    <div>
                      <p className="text-[10px] text-gourmand-biscuit font-semibold uppercase">Coût direct</p>
-                     <p className="text-base font-bold transition-all">{fmt(liveCost)}</p>
+                     <p className="text-base font-bold">{fmt(liveCost)}</p>
                    </div>
                    <div className="text-right">
                      <p className="text-[10px] text-gourmand-biscuit font-semibold uppercase">Marge estimée</p>
-                     <p className={`text-base font-bold transition-all ${marginColor(liveMarginRate)}`}>
-                       {livePrice > 0 ? `${fmt(liveMargin)} (${(liveMarginRate * 100).toFixed(0)}%)` : '-'}
-                     </p>
+                     <p className={`text-base font-bold ${marginColor(liveMarginRate)}`}>{livePrice > 0 ? `${fmt(liveMargin)} (${(liveMarginRate * 100).toFixed(0)}%)` : '-'}</p>
                    </div>
                 </div>
-                <button onClick={save} className="gourmand-btn-primary w-full py-3.5 text-sm">
-                  {editItem ? 'Mettre à jour' : 'Enregistrer la recette'}
+                <button onClick={save} disabled={saving} className="gourmand-btn-primary w-full py-3.5 text-sm disabled:opacity-50">
+                  {saving ? 'Enregistrement...' : editItem ? 'Mettre à jour' : 'Enregistrer la recette'}
                 </button>
               </div>
             </div>
@@ -366,12 +319,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
       <AnimatePresence>
         {deleteTarget && (
-          <ConfirmDialog
-            title="Supprimer la recette"
-            message={`Désirez-vous supprimer "${deleteTarget.name}" définitivement ?`}
-            onConfirm={confirmDelete}
-            onCancel={() => setDeleteTarget(null)}
-          />
+          <ConfirmDialog title="Supprimer" message={`Désirez-vous supprimer "${deleteTarget.name}" ?`} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />
         )}
       </AnimatePresence>
     </motion.div>

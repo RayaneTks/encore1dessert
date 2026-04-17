@@ -13,17 +13,18 @@ const CATEGORIES = ['Crèmerie', 'Élevage', 'Épicerie', 'Fruits secs', 'Chocol
 
 interface Props {
   ingredients: RawIngredient[];
-  setIngredients: React.Dispatch<React.SetStateAction<RawIngredient[]>>;
+  onSave: (ing: RawIngredient) => Promise<RawIngredient | null>;
+  onDelete: (id: string) => Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients, showToast }) => {
+export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDelete, showToast }) => {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<RawIngredient | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RawIngredient | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // Form state
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [unit, setUnit] = useState<'kg' | 'L' | 'u'>('kg');
@@ -55,33 +56,29 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
     setShowForm(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!name || !price) return;
     const priceVal = parseFloat(price);
     if (isNaN(priceVal) || priceVal <= 0) return;
-
     const label = purchaseLabel || `${priceVal.toFixed(2)} €/${unit}`;
 
-    if (editItem) {
-      setIngredients(prev => prev.map(i =>
-        i.id === editItem.id ? { ...i, name, pricePerKg: priceVal, unit, category, emoji, purchaseLabel: label, notes } : i
-      ));
-      showToast(`${name} mis à jour`);
-    } else {
-      const newItem: RawIngredient = {
-        id: 'ing-' + Date.now(),
-        name, pricePerKg: priceVal, unit, category, emoji, purchaseLabel: label, notes,
-        createdAt: new Date().toISOString(),
-      };
-      setIngredients(prev => [...prev, newItem]);
-      showToast(`${name} ajouté`);
+    setSaving(true);
+    const ing: RawIngredient = {
+      id: editItem?.id || 'ing-' + Date.now(),
+      name, pricePerKg: priceVal, unit, category, emoji, purchaseLabel: label, notes,
+      createdAt: editItem?.createdAt || new Date().toISOString(),
+    };
+    const result = await onSave(ing);
+    setSaving(false);
+    if (result) {
+      showToast(editItem ? `${name} mis à jour` : `${name} ajouté`);
+      setShowForm(false);
     }
-    setShowForm(false);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setIngredients(prev => prev.filter(i => i.id !== deleteTarget.id));
+    await onDelete(deleteTarget.id);
     showToast(`${deleteTarget.name} supprimé`, 'info');
     setDeleteTarget(null);
   };
@@ -94,9 +91,9 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
@@ -109,7 +106,6 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
         }
       />
 
-      {/* Search */}
       <div className="px-4 mb-4">
         <div className="gourmand-input flex items-center gap-3 bg-white shadow-sm overflow-hidden py-3">
           <Search size={18} className="text-gourmand-biscuit flex-shrink-0" />
@@ -122,7 +118,6 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
         </div>
       </div>
 
-      {/* List */}
       <div className="px-4">
         <SectionCard padding={false}>
           <div className="divide-y divide-gourmand-border/50">
@@ -152,48 +147,28 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
         </SectionCard>
       </div>
 
-      {/* Add/Edit Modal */}
       <AnimatePresence>
         {showForm && (
           <Modal onClose={() => setShowForm(false)} title={editItem ? 'Modifier' : 'Nouveau'}>
             <div className="p-5 space-y-5">
-              {/* Emoji picker */}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-2">Icône de repère</p>
                 <div className="flex flex-wrap gap-2">
                   {EMOJIS.map(e => (
-                    <button
-                      key={e}
-                      onClick={() => setEmoji(e)}
+                    <button key={e} onClick={() => setEmoji(e)}
                       className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${emoji === e ? 'bg-gourmand-border/50 ring-2 ring-gourmand-chocolate scale-110' : 'bg-gourmand-bg hover:bg-gourmand-border/30'}`}
-                    >
-                      {e}
-                    </button>
+                    >{e}</button>
                   ))}
                 </div>
               </div>
-
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom de l'ingrédient</p>
-                <input
-                  placeholder="Ex: Farine T55"
-                  className="gourmand-input w-full"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                />
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom</p>
+                <input placeholder="Ex: Farine T55" className="gourmand-input w-full" value={name} onChange={e => setName(e.target.value)} />
               </div>
-
               <div className="flex gap-3">
                 <div className="flex-1">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Prix</p>
-                  <input
-                    placeholder="0.00"
-                    type="number"
-                    step="0.01"
-                    className="gourmand-input w-full"
-                    value={price}
-                    onChange={e => setPrice(e.target.value)}
-                  />
+                  <input placeholder="0.00" type="number" step="0.01" className="gourmand-input w-full" value={price} onChange={e => setPrice(e.target.value)} />
                 </div>
                 <div className="w-24">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Unité</p>
@@ -204,41 +179,24 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
                   </select>
                 </div>
               </div>
-
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Catégorie</p>
                 <select className="gourmand-input w-full" value={category} onChange={e => setCategory(e.target.value)}>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Étiquette d'achat (Mémo)</p>
-                <input
-                  placeholder="Ex: 4,29€ les 20"
-                  className="gourmand-input w-full"
-                  value={purchaseLabel}
-                  onChange={e => setPurchaseLabel(e.target.value)}
-                />
+                <input placeholder="Ex: 4,29€ les 20" className="gourmand-input w-full" value={purchaseLabel} onChange={e => setPurchaseLabel(e.target.value)} />
               </div>
-
-              <textarea
-                placeholder="Notes de traçabilité ou conservation..."
-                className="gourmand-input w-full resize-none h-20 text-sm"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-              />
-
-              <button onClick={save} className="gourmand-btn-primary w-full py-4 text-sm mt-2">
-                {editItem ? 'Enregistrer les modifications' : 'Ajouter'}
+              <textarea placeholder="Notes..." className="gourmand-input w-full resize-none h-20 text-sm" value={notes} onChange={e => setNotes(e.target.value)} />
+              <button onClick={save} disabled={saving} className="gourmand-btn-primary w-full py-4 text-sm mt-2 disabled:opacity-50">
+                {saving ? 'Enregistrement...' : editItem ? 'Enregistrer' : 'Ajouter'}
               </button>
-
               {editItem && (
-                <button
-                  onClick={() => { setShowForm(false); setDeleteTarget(editItem); }}
-                  className="w-full py-3 text-[11px] font-bold uppercase tracking-widest text-red-500 bg-red-50 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors mt-2"
-                >
-                  <Trash2 size={16} /> Supprimer cet ingrédient
+                <button onClick={() => { setShowForm(false); setDeleteTarget(editItem); }}
+                  className="w-full py-3 text-[11px] font-bold uppercase tracking-widest text-red-500 bg-red-50 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors mt-2">
+                  <Trash2 size={16} /> Supprimer
                 </button>
               )}
             </div>
@@ -248,12 +206,7 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
 
       <AnimatePresence>
         {deleteTarget && (
-          <ConfirmDialog
-            title="Suppression"
-            message={`Désirez-vous retirer "${deleteTarget.name}" ? Cela impactera les bases et recettes associées.`}
-            onConfirm={confirmDelete}
-            onCancel={() => setDeleteTarget(null)}
-          />
+          <ConfirmDialog title="Suppression" message={`Retirer "${deleteTarget.name}" ?`} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />
         )}
       </AnimatePresence>
     </motion.div>

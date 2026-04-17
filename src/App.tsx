@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { supabase } from './lib/supabase';
 import {
   Tab,
   RawIngredient,
@@ -13,6 +12,7 @@ import {
   calculateDessertCost,
   createFullSnapshot,
 } from './lib/calculations';
+import * as db from './lib/db';
 
 import { BottomNav } from './components/BottomNav';
 import { Toast } from './components/Toast';
@@ -23,114 +23,17 @@ import { BasesScreen } from './screens/BasesScreen';
 import { DessertsScreen } from './screens/DessertsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { InstallPrompt } from './components/InstallPrompt';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('calculate');
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ─── State ─────────────────────────────────────────────────
   const [ingredients, setIngredients] = useState<RawIngredient[]>([]);
   const [bases, setBases] = useState<Base[]>([]);
   const [desserts, setDesserts] = useState<Dessert[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-
-  // ─── Fetching from Supabase ────────────────────────────────
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      
-      // On récupère tout en parallèle
-      const [ingRes, baseRes, baseCompRes, dessertRes, dessertCompRes, historyRes] = await Promise.all([
-        supabase.from('raw_ingredients').select('*').order('name'),
-        supabase.from('bases').select('*').order('name'),
-        supabase.from('base_components').select('*'),
-        supabase.from('desserts').select('*').order('name'),
-        supabase.from('dessert_components').select('*'),
-        supabase.from('history_entries').select('*').order('date', { ascending: false })
-      ]);
-
-      if (ingRes.data) setIngredients(ingRes.data);
-      
-      // Reconstruction des bases avec leurs composants
-      if (baseRes.data && baseCompRes.data) {
-        const fullBases = baseRes.data.map(b => ({
-          ...b,
-          components: baseCompRes.data
-            .filter(bc => bc.base_id === b.id)
-            .map(bc => ({ ingredientId: bc.ingredient_id, quantity: bc.quantity }))
-        }));
-        setBases(fullBases);
-      }
-
-      // Reconstruction des desserts avec leurs composants
-      if (dessertRes.data && dessertCompRes.data) {
-        const fullDesserts = dessertRes.data.map(d => ({
-          ...d,
-          sellPrice: d.sell_price, // Mapping snake_case to camelCase
-          components: dessertCompRes.data
-            .filter(dc => dc.dessert_id === d.id)
-            .map(dc => ({ type: dc.type, id: dc.base_id || dc.ingredient_id, quantity: dc.quantity }))
-        }));
-        setDesserts(fullDesserts);
-      }
-
-      if (historyRes.data) {
-        setHistory(historyRes.data.map(h => ({
-           ...h,
-           dessertId: h.dessert_id,
-           dessertName: h.dessert_name,
-           dessertEmoji: h.dessert_emoji,
-           quantitySold: h.quantity_sold,
-           unitCost: h.unit_cost,
-           unitPrice: h.unit_price,
-           totalRevenue: h.total_revenue,
-           totalCost: h.total_cost,
-           totalProfit: h.total_profit,
-           marginRate: h.margin_rate,
-           linesSnapshot: h.lines_snapshot
-        })));
-      }
-
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // ─── Sync Wrappers (Remplacement du localStorage par Supabase) ───────────
-
-  const updateIngredients = async (newIngs: RawIngredient[] | ((prev: RawIngredient[]) => RawIngredient[])) => {
-    const next = typeof newIngs === 'function' ? newIngs(ingredients) : newIngs;
-    setIngredients(next);
-    
-    // On synchronise avec Supabase (simplifié: on upsert)
-    // Pour une vraie app, on ferait des appels atomiques. Ici on gère massivement pour rester fluide.
-    for (const ing of next) {
-      await supabase.from('raw_ingredients').upsert({
-        id: ing.id.includes('ing-') ? undefined : ing.id, // Generate new if temporary
-        name: ing.name,
-        price_per_kg: ing.pricePerKg,
-        unit: ing.unit,
-        category: ing.category,
-        emoji: ing.emoji,
-        purchase_label: ing.purchaseLabel,
-        notes: ing.notes
-      });
-    }
-    // Note: On devrait aussi gérer les suppressions ici...
-  };
-
-  const updateBases = async (newBases: Base[] | ((prev: Base[]) => Base[])) => {
-    const next = typeof newBases === 'function' ? newBases(bases) : newBases;
-    setBases(next);
-    // Logique de sync...
-  };
 
   // ─── Toast ─────────────────────────────────────────────────
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -142,7 +45,114 @@ export default function App() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // ─── History Entry ───────────
+  // ─── Initial Fetch ─────────────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [ings, bs, ds, hs] = await Promise.all([
+        db.fetchIngredients(),
+        db.fetchBases(),
+        db.fetchDesserts(),
+        db.fetchHistory(),
+      ]);
+      setIngredients(ings);
+      setBases(bs);
+      setDesserts(ds);
+      setHistory(hs);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      showToast('Erreur de chargement depuis Supabase', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // ─── CRUD Wrappers (sync local state + Supabase) ──────────
+
+  // Ingredients
+  const handleSaveIngredient = useCallback(async (ing: RawIngredient) => {
+    try {
+      const saved = await db.upsertIngredient(ing);
+      setIngredients(prev => {
+        const idx = prev.findIndex(i => i.id === ing.id);
+        if (idx >= 0) return prev.map(i => i.id === ing.id ? saved : i);
+        return [...prev, saved];
+      });
+      return saved;
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la sauvegarde', 'error');
+      return null;
+    }
+  }, [showToast]);
+
+  const handleDeleteIngredient = useCallback(async (id: string) => {
+    try {
+      await db.deleteIngredient(id);
+      setIngredients(prev => prev.filter(i => i.id !== id));
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la suppression', 'error');
+    }
+  }, [showToast]);
+
+  // Bases
+  const handleSaveBase = useCallback(async (base: Base) => {
+    try {
+      const saved = await db.upsertBase(base);
+      setBases(prev => {
+        const idx = prev.findIndex(b => b.id === base.id);
+        if (idx >= 0) return prev.map(b => b.id === base.id ? saved : b);
+        return [...prev, saved];
+      });
+      return saved;
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la sauvegarde', 'error');
+      return null;
+    }
+  }, [showToast]);
+
+  const handleDeleteBase = useCallback(async (id: string) => {
+    try {
+      await db.deleteBase(id);
+      setBases(prev => prev.filter(b => b.id !== id));
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la suppression', 'error');
+    }
+  }, [showToast]);
+
+  // Desserts
+  const handleSaveDessert = useCallback(async (dessert: Dessert) => {
+    try {
+      const saved = await db.upsertDessert(dessert);
+      setDesserts(prev => {
+        const idx = prev.findIndex(d => d.id === dessert.id);
+        if (idx >= 0) return prev.map(d => d.id === dessert.id ? saved : d);
+        return [...prev, saved];
+      });
+      return saved;
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la sauvegarde', 'error');
+      return null;
+    }
+  }, [showToast]);
+
+  const handleDeleteDessert = useCallback(async (id: string) => {
+    try {
+      await db.deleteDessert(id);
+      setDesserts(prev => prev.filter(d => d.id !== id));
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la suppression', 'error');
+    }
+  }, [showToast]);
+
+  // History
   const addHistoryEntry = useCallback(async (dessert: Dessert, quantity: number, overridePrice?: number) => {
     const unitCost = calculateDessertCost(dessert, ingredients, bases);
     const unitPrice = overridePrice || dessert.sellPrice;
@@ -150,62 +160,51 @@ export default function App() {
     const totalCost = unitCost * quantity;
     const totalProfit = totalRevenue - totalCost;
     const marginRate = totalRevenue > 0 ? totalProfit / totalRevenue : 0;
+    const linesSnapshot = createFullSnapshot(dessert, ingredients, bases);
 
-    const entry: HistoryEntry = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      dessertId: dessert.id,
-      dessertName: dessert.name,
-      dessertEmoji: dessert.emoji,
-      quantitySold: quantity,
-      unitCost,
-      unitPrice,
-      totalRevenue,
-      totalCost,
-      totalProfit,
-      marginRate,
-      linesSnapshot: createFullSnapshot(dessert, ingredients, bases),
-    };
-
-    // Save to Supabase
-    const { error } = await supabase.from('history_entries').insert({
-      dessert_id: dessert.id.includes('dessert-') ? null : dessert.id,
-      dessert_name: dessert.name,
-      dessert_emoji: dessert.emoji,
-      quantity_sold: quantity,
-      unit_cost: unitCost,
-      unit_price: unitPrice,
-      total_revenue: totalRevenue,
-      total_cost: totalCost,
-      total_profit: totalProfit,
-      margin_rate: marginRate,
-      lines_snapshot: entry.linesSnapshot
-    });
-
-    if (!error) {
-      setHistory(prev => [entry, ...prev]);
-    } else {
-      showToast("Erreur lors de la sauvegarde en base", "error");
+    try {
+      const saved = await db.insertHistoryEntry({
+        dessertId: dessert.id,
+        dessertName: dessert.name,
+        dessertEmoji: dessert.emoji,
+        quantitySold: quantity,
+        unitCost, unitPrice, totalRevenue, totalCost, totalProfit, marginRate,
+        linesSnapshot,
+      });
+      setHistory(prev => [saved, ...prev]);
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de l\'enregistrement', 'error');
     }
   }, [ingredients, bases, showToast]);
 
+  const handleDeleteHistory = useCallback(async (id: string) => {
+    try {
+      await db.deleteHistoryEntry(id);
+      setHistory(prev => prev.filter(h => h.id !== id));
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la suppression', 'error');
+    }
+  }, [showToast]);
+
+  // ─── Loading ───────────────────────────────────────────────
   if (loading) {
     return (
       <div className="app-container flex items-center justify-center">
-         <div className="text-center">
-            <div className="w-8 h-8 border-4 border-gourmand-chocolate border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="font-semibold text-gourmand-biscuit text-sm">Chargement de la cave...</p>
-         </div>
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-gourmand-chocolate border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="font-semibold text-gourmand-biscuit text-sm">Chargement...</p>
+        </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="app-container font-sans text-gourmand-chocolate selection:bg-gourmand-chocolate/10">
-      {/* Toast notifications */}
+      <InstallPrompt />
       <Toast toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Screen content */}
       <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           {activeTab === 'calculate' && (
@@ -224,7 +223,8 @@ export default function App() {
               desserts={desserts}
               ingredients={ingredients}
               bases={bases}
-              setDesserts={setDesserts}
+              onSave={handleSaveDessert}
+              onDelete={handleDeleteDessert}
               showToast={showToast}
             />
           )}
@@ -233,7 +233,8 @@ export default function App() {
               key="bases"
               bases={bases}
               ingredients={ingredients}
-              setBases={setBases}
+              onSave={handleSaveBase}
+              onDelete={handleDeleteBase}
               showToast={showToast}
             />
           )}
@@ -241,7 +242,8 @@ export default function App() {
             <IngredientsScreen
               key="ingredients"
               ingredients={ingredients}
-              setIngredients={updateIngredients as any}
+              onSave={handleSaveIngredient}
+              onDelete={handleDeleteIngredient}
               showToast={showToast}
             />
           )}
@@ -249,7 +251,7 @@ export default function App() {
             <HistoryScreen
               key="history"
               history={history}
-              setHistory={setHistory}
+              onDelete={handleDeleteHistory}
               showToast={showToast}
             />
           )}
@@ -266,4 +268,3 @@ export default function App() {
     </div>
   );
 }
-
