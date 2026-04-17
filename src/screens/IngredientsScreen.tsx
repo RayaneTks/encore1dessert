@@ -8,7 +8,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { fmt } from '../lib/calculations';
 
-const EMOJIS = ['🧈', '🥚', '🥛', '🫙', '🌰', '🥜', '📦', '🍬', '🌾', '🍫', '🫒', '🧂', '🥐', '🍋', '🫐'];
+
 const CATEGORIES = ['Crèmerie', 'Élevage', 'Épicerie', 'Fruits secs', 'Chocolat', 'Autre'];
 
 interface Props {
@@ -57,9 +57,12 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
   };
 
   const save = async () => {
-    if (!name || !price) return;
+    if (!name.trim()) { showToast('Veuillez saisir un nom', 'error'); return; }
+    if (!price) { showToast('Veuillez saisir un prix', 'error'); return; }
     const priceVal = parseFloat(price);
-    if (isNaN(priceVal) || priceVal <= 0) return;
+    if (isNaN(priceVal) || priceVal <= 0) { showToast('Prix invalide', 'error'); return; }
+    if (!emoji.trim()) { showToast('Icône requise', 'error'); return; }
+
     const label = purchaseLabel || `${priceVal.toFixed(2)} €/${unit}`;
 
     setSaving(true);
@@ -151,19 +154,15 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
         {showForm && (
           <Modal onClose={() => setShowForm(false)} title={editItem ? 'Modifier' : 'Nouveau'}>
             <div className="p-5 space-y-5">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-2">Icône de repère</p>
-                <div className="flex flex-wrap gap-2">
-                  {EMOJIS.map(e => (
-                    <button key={e} onClick={() => setEmoji(e)}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${emoji === e ? 'bg-gourmand-border/50 ring-2 ring-gourmand-chocolate scale-110' : 'bg-gourmand-bg hover:bg-gourmand-border/30'}`}
-                    >{e}</button>
-                  ))}
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Icône</p>
+                  <input type="text" maxLength={2} className="gourmand-input w-16 text-center text-xl" value={emoji} onChange={e => setEmoji(e.target.value)} />
                 </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom</p>
-                <input placeholder="Ex: Farine T55" className="gourmand-input w-full" value={name} onChange={e => setName(e.target.value)} />
+                <div className="flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom</p>
+                  <input placeholder="Ex: Farine T55" className="gourmand-input w-full" value={name} onChange={e => setName(e.target.value)} />
+                </div>
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">

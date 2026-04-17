@@ -25,6 +25,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
   // Form state
   const [name, setName] = useState('');
+  const [emoji, setEmoji] = useState('🍰');
   const [sellPrice, setSellPrice] = useState('');
   const [servings, setServings] = useState('8');
   const [notes, setNotes] = useState('');
@@ -32,7 +33,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
   const openAdd = () => {
     setEditItem(null);
-    setName(''); setSellPrice(''); setServings('8'); setNotes('');
+    setName(''); setEmoji('🍰'); setSellPrice(''); setServings('8'); setNotes('');
     setCompMap({});
     setShowForm(true);
   };
@@ -40,6 +41,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
   const openEdit = (d: Dessert) => {
     setEditItem(d);
     setName(d.name);
+    setEmoji(d.emoji);
     setSellPrice(d.sellPrice.toString());
     setServings(d.servings.toString());
     setNotes(d.notes);
@@ -50,18 +52,25 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
   };
 
   const save = async () => {
-    if (!name) return;
+    if (!name.trim()) { showToast('Veuillez saisir un nom', 'error'); return; }
+    const sellPriceVal = parseFloat(sellPrice);
+    if (isNaN(sellPriceVal) || sellPriceVal < 0) { showToast('Prix de vente invalide', 'error'); return; }
+    const servingsVal = parseInt(servings);
+    if (isNaN(servingsVal) || servingsVal <= 0) { showToast('Nombre de parts invalide (minimum 1)', 'error'); return; }
+
     const components = Object.entries(compMap)
       .filter(([, v]) => v.qty > 0)
       .map(([id, v]) => ({ type: v.type, id, quantity: v.qty }));
-    if (components.length === 0) return;
+    if (components.length === 0) { showToast('Ajoutez au moins un composant à la recette', 'error'); return; }
+
+    if (!emoji.trim()) { showToast('Icône requise', 'error'); return; }
 
     setSaving(true);
     const dessert: Dessert = {
       id: editItem?.id || 'dessert-' + Date.now(),
-      name, emoji: '🍰',
-      sellPrice: parseFloat(sellPrice) || 0,
-      servings: parseInt(servings) || 1,
+      name, emoji,
+      sellPrice: sellPriceVal,
+      servings: servingsVal,
       notes, components,
       createdAt: editItem?.createdAt || new Date().toISOString(),
     };
@@ -118,11 +127,23 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
         title="Créations"
         description={`${desserts.length} recette${desserts.length > 1 ? 's' : ''} disponibles.`}
         action={
-          <button onClick={openAdd} className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform">
+          <button 
+            disabled={ingredients.length === 0 && bases.length === 0}
+            onClick={openAdd} 
+            className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform disabled:opacity-50 disabled:active:scale-100"
+          >
             <Plus size={22} />
           </button>
         }
       />
+
+      {ingredients.length === 0 && bases.length === 0 && (
+        <div className="px-4 mb-4">
+          <div className="bg-amber-50 text-amber-700 border border-amber-200/50 p-4 rounded-xl text-sm font-medium">
+            💡 Ajoutez d'abord des matières premières pour pouvoir créer une recette.
+          </div>
+        </div>
+      )}
 
       <div className="px-4 space-y-4">
         {desserts.map(d => {
@@ -244,7 +265,16 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
             <div className="flex flex-col h-[70vh]">
               <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-32 scrollbar-hide">
                 <div className="space-y-4">
-                  <input placeholder="Nom du produit" className="gourmand-input w-full text-base" value={name} onChange={e => setName(e.target.value)} />
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Icône</p>
+                      <input type="text" maxLength={2} className="gourmand-input w-16 text-center text-xl text-gourmand-chocolate" value={emoji} onChange={e => setEmoji(e.target.value)} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Nom du produit</p>
+                      <input placeholder="Ex: Tarte Citron" className="gourmand-input w-full text-base" value={name} onChange={e => setName(e.target.value)} />
+                    </div>
+                  </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
                       <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Prix de vente (€)</p>

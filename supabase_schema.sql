@@ -4,7 +4,7 @@ create extension if not exists "uuid-ossp";
 -- 1. Raw Ingredients (Matières Premières)
 create table raw_ingredients (
   id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null default auth.uid(),
+  user_id uuid references auth.users default auth.uid(),
   name text not null,
   price_per_kg numeric not null default 0,
   unit text not null check (unit in ('kg', 'L', 'u')),
@@ -19,7 +19,7 @@ create table raw_ingredients (
 -- 2. Bases (Préparations Maison)
 create table bases (
   id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null default auth.uid(),
+  user_id uuid references auth.users default auth.uid(),
   name text not null,
   category text not null,
   emoji text not null,
@@ -40,7 +40,7 @@ create table base_components (
 -- 3. Desserts (Produits finis / Fiches Techniques)
 create table desserts (
   id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null default auth.uid(),
+  user_id uuid references auth.users default auth.uid(),
   name text not null,
   emoji text not null,
   sell_price numeric not null default 0,
@@ -71,7 +71,7 @@ create table dessert_components (
 -- 4. History Entries (Dashboard et Comptabilité)
 create table history_entries (
   id uuid default uuid_generate_v4() primary key,
-  user_id uuid references auth.users not null default auth.uid(),
+  user_id uuid references auth.users default auth.uid(),
   date timestamptz default now() not null,
   dessert_id uuid references desserts(id) on delete set null,
   dessert_name text not null,

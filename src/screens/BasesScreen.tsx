@@ -26,13 +26,14 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState('');
+  const [emoji, setEmoji] = useState('🍯');
   const [category, setCategory] = useState('Fond');
   const [notes, setNotes] = useState('');
   const [compMap, setCompMap] = useState<Record<string, number>>({});
 
   const openAdd = () => {
     setEditItem(null);
-    setName(''); setCategory('Fond'); setNotes('');
+    setName(''); setEmoji('🍯'); setCategory('Fond'); setNotes('');
     setCompMap({});
     setShowForm(true);
   };
@@ -40,6 +41,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
   const openEdit = (base: Base) => {
     setEditItem(base);
     setName(base.name);
+    setEmoji(base.emoji);
     setCategory(base.category);
     setNotes(base.notes);
     const map: Record<string, number> = {};
@@ -49,16 +51,17 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
   };
 
   const save = async () => {
-    if (!name) return;
+    if (!name.trim()) { showToast('Veuillez saisir un nom', 'error'); return; }
     const components = Object.entries(compMap)
       .filter(([, qty]) => qty > 0)
       .map(([ingredientId, quantity]) => ({ ingredientId, quantity }));
-    if (components.length === 0) return;
+    if (components.length === 0) { showToast('Veuillez ajouter au moins un composant', 'error'); return; }
+    if (!emoji.trim()) { showToast('Icône requise', 'error'); return; }
 
     setSaving(true);
     const base: Base = {
       id: editItem?.id || 'base-' + Date.now(),
-      name, category, emoji: '🍯', notes, components,
+      name, category, emoji, notes, components,
       createdAt: editItem?.createdAt || new Date().toISOString(),
     };
     const result = await onSave(base);
@@ -88,11 +91,23 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
         title="Préparations"
         description={`${bases.length} base${bases.length > 1 ? 's' : ''} maison`}
         action={
-          <button onClick={openAdd} className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform">
+          <button 
+            disabled={ingredients.length === 0}
+            onClick={openAdd} 
+            className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform disabled:opacity-50 disabled:active:scale-100"
+          >
             <Plus size={22} />
           </button>
         }
       />
+
+      {ingredients.length === 0 && (
+        <div className="px-4 mb-4">
+          <div className="bg-amber-50 text-amber-700 border border-amber-200/50 p-4 rounded-xl text-sm font-medium">
+            💡 Ajoutez d'abord des matières premières pour pouvoir créer une base.
+          </div>
+        </div>
+      )}
 
       <div className="px-4 space-y-4">
         {bases.map(base => {
@@ -180,9 +195,15 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
         {showForm && (
           <Modal onClose={() => setShowForm(false)} title={editItem ? 'Éditer' : 'Nouvelle base'}>
             <div className="p-5 space-y-5">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom</p>
-                <input placeholder="Ex: Pâte sucrée amande" className="gourmand-input w-full" value={name} onChange={e => setName(e.target.value)} />
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Icône</p>
+                  <input type="text" maxLength={2} className="gourmand-input w-16 text-center text-xl text-gourmand-chocolate" value={emoji} onChange={e => setEmoji(e.target.value)} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom</p>
+                  <input placeholder="Ex: Pâte sucrée amande" className="gourmand-input w-full" value={name} onChange={e => setName(e.target.value)} />
+                </div>
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Type</p>

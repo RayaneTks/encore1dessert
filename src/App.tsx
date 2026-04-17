@@ -81,9 +81,9 @@ export default function App() {
         return [...prev, saved];
       });
       return saved;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de la sauvegarde', 'error');
+      showToast(err.message || 'Erreur lors de la sauvegarde', 'error');
       return null;
     }
   }, [showToast]);
@@ -92,9 +92,9 @@ export default function App() {
     try {
       await db.deleteIngredient(id);
       setIngredients(prev => prev.filter(i => i.id !== id));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de la suppression', 'error');
+      showToast(err.message || 'Erreur lors de la suppression', 'error');
     }
   }, [showToast]);
 
@@ -108,9 +108,9 @@ export default function App() {
         return [...prev, saved];
       });
       return saved;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de la sauvegarde', 'error');
+      showToast(err.message || 'Erreur lors de la sauvegarde', 'error');
       return null;
     }
   }, [showToast]);
@@ -119,9 +119,9 @@ export default function App() {
     try {
       await db.deleteBase(id);
       setBases(prev => prev.filter(b => b.id !== id));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de la suppression', 'error');
+      showToast(err.message || 'Erreur lors de la suppression', 'error');
     }
   }, [showToast]);
 
@@ -135,9 +135,9 @@ export default function App() {
         return [...prev, saved];
       });
       return saved;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de la sauvegarde', 'error');
+      showToast(err.message || 'Erreur lors de la sauvegarde', 'error');
       return null;
     }
   }, [showToast]);
@@ -146,9 +146,9 @@ export default function App() {
     try {
       await db.deleteDessert(id);
       setDesserts(prev => prev.filter(d => d.id !== id));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de la suppression', 'error');
+      showToast(err.message || 'Erreur lors de la suppression', 'error');
     }
   }, [showToast]);
 
@@ -172,9 +172,9 @@ export default function App() {
         linesSnapshot,
       });
       setHistory(prev => [saved, ...prev]);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de l\'enregistrement', 'error');
+      showToast(err.message || 'Erreur lors de l\'enregistrement', 'error');
     }
   }, [ingredients, bases, showToast]);
 
@@ -182,9 +182,9 @@ export default function App() {
     try {
       await db.deleteHistoryEntry(id);
       setHistory(prev => prev.filter(h => h.id !== id));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast('Erreur lors de la suppression', 'error');
+      showToast(err.message || 'Erreur lors de la suppression', 'error');
     }
   }, [showToast]);
 
