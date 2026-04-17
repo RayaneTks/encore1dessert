@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Trash2, Edit2, ChevronRight } from 'lucide-react';
+import { Plus, Search, Trash2, ChevronRight } from 'lucide-react';
 import { RawIngredient } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
@@ -103,19 +103,19 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
         title="Matières Premières"
         description={`${ingredients.length} ingrédient${ingredients.length > 1 ? 's' : ''} référencé${ingredients.length > 1 ? 's' : ''}`}
         action={
-          <button onClick={openAdd} className="w-10 h-10 rounded-2xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-lg">
-            <Plus size={24} />
+          <button onClick={openAdd} className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform">
+            <Plus size={22} />
           </button>
         }
       />
 
       {/* Search */}
       <div className="px-4 mb-4">
-        <div className="gourmand-input flex items-center gap-3 bg-white shadow-sm overflow-hidden">
-          <Search size={18} className="text-gourmand-cocoa/40 flex-shrink-0" />
+        <div className="gourmand-input flex items-center gap-3 bg-white shadow-sm overflow-hidden py-3">
+          <Search size={18} className="text-gourmand-biscuit flex-shrink-0" />
           <input
-            placeholder="Rechercher..."
-            className="bg-transparent flex-1 outline-none border-none focus:ring-0 text-sm font-bold"
+            placeholder="Rechercher une matière..."
+            className="bg-transparent flex-1 outline-none border-none focus:ring-0 text-sm font-medium"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -125,28 +125,28 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
       {/* List */}
       <div className="px-4">
         <SectionCard padding={false}>
-          <div className="divide-y divide-gourmand-border">
+          <div className="divide-y divide-gourmand-border/50">
             {filtered.map(ing => (
               <button
                 key={ing.id}
                 onClick={() => openEdit(ing)}
-                className="w-full p-4 flex items-center justify-between active:bg-gourmand-bg/50 transition-colors text-left"
+                className="w-full p-4 flex items-center justify-between hover:bg-gourmand-bg/50 transition-colors text-left"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-2xl flex-shrink-0">{ing.emoji}</span>
                   <div className="min-w-0">
-                    <p className="font-black italic text-base leading-tight truncate">{ing.name}</p>
-                    <p className="text-[10px] font-bold text-gourmand-cocoa/40 uppercase">{ing.category} · {unitLabel(ing.unit)}</p>
+                    <p className="font-semibold text-base text-gourmand-chocolate leading-tight truncate mb-0.5">{ing.name}</p>
+                    <p className="text-[10px] font-medium text-gourmand-biscuit uppercase tracking-wide">{ing.category} · {unitLabel(ing.unit)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <p className="font-black text-gourmand-strawberry text-right">{fmt(ing.pricePerKg)}</p>
-                  <ChevronRight size={16} className="text-gourmand-cocoa/20" />
+                  <p className="font-semibold text-gourmand-chocolate text-right">{fmt(ing.pricePerKg)}</p>
+                  <ChevronRight size={16} className="text-gourmand-biscuit" />
                 </div>
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="p-8 text-center opacity-30 text-xs font-bold uppercase tracking-widest">Aucun résultat</div>
+              <div className="p-8 text-center opacity-50 text-xs font-semibold uppercase tracking-widest text-gourmand-biscuit">Aucun résultat</div>
             )}
           </div>
         </SectionCard>
@@ -155,17 +155,17 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
       {/* Add/Edit Modal */}
       <AnimatePresence>
         {showForm && (
-          <Modal onClose={() => setShowForm(false)} title={editItem ? 'Modifier l\'ingrédient' : 'Nouvel Ingrédient'}>
-            <div className="p-5 space-y-4">
+          <Modal onClose={() => setShowForm(false)} title={editItem ? 'Modifier' : 'Nouveau'}>
+            <div className="p-5 space-y-5">
               {/* Emoji picker */}
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-gourmand-cocoa/40 mb-2">Icône</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-2">Icône de repère</p>
                 <div className="flex flex-wrap gap-2">
                   {EMOJIS.map(e => (
                     <button
                       key={e}
                       onClick={() => setEmoji(e)}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${emoji === e ? 'bg-gourmand-strawberry/10 ring-2 ring-gourmand-strawberry scale-110' : 'bg-gourmand-bg'}`}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${emoji === e ? 'bg-gourmand-border/50 ring-2 ring-gourmand-chocolate scale-110' : 'bg-gourmand-bg hover:bg-gourmand-border/30'}`}
                     >
                       {e}
                     </button>
@@ -173,57 +173,72 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
                 </div>
               </div>
 
-              <input
-                placeholder="Nom (ex: Farine T55)"
-                className="gourmand-input w-full"
-                value={name}
-                onChange={e => setName(e.target.value)}
-              />
-
-              <div className="flex gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom de l'ingrédient</p>
                 <input
-                  placeholder="Prix"
-                  type="number"
-                  step="0.01"
-                  className="gourmand-input flex-1"
-                  value={price}
-                  onChange={e => setPrice(e.target.value)}
+                  placeholder="Ex: Farine T55"
+                  className="gourmand-input w-full"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                 />
-                <select className="gourmand-input w-20" value={unit} onChange={e => setUnit(e.target.value as any)}>
-                  <option value="kg">kg</option>
-                  <option value="L">L</option>
-                  <option value="u">unité</option>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Prix</p>
+                  <input
+                    placeholder="0.00"
+                    type="number"
+                    step="0.01"
+                    className="gourmand-input w-full"
+                    value={price}
+                    onChange={e => setPrice(e.target.value)}
+                  />
+                </div>
+                <div className="w-24">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Unité</p>
+                  <select className="gourmand-input w-full" value={unit} onChange={e => setUnit(e.target.value as any)}>
+                    <option value="kg">kg</option>
+                    <option value="L">L</option>
+                    <option value="u">unité</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Catégorie</p>
+                <select className="gourmand-input w-full" value={category} onChange={e => setCategory(e.target.value)}>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
-              <select className="gourmand-input w-full" value={category} onChange={e => setCategory(e.target.value)}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-
-              <input
-                placeholder="Étiquette achat (ex: 4,29€ les 20)"
-                className="gourmand-input w-full"
-                value={purchaseLabel}
-                onChange={e => setPurchaseLabel(e.target.value)}
-              />
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Étiquette d'achat (Mémo)</p>
+                <input
+                  placeholder="Ex: 4,29€ les 20"
+                  className="gourmand-input w-full"
+                  value={purchaseLabel}
+                  onChange={e => setPurchaseLabel(e.target.value)}
+                />
+              </div>
 
               <textarea
-                placeholder="Notes (optionnel)"
-                className="gourmand-input w-full resize-none h-20"
+                placeholder="Notes de traçabilité ou conservation..."
+                className="gourmand-input w-full resize-none h-20 text-sm"
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
               />
 
-              <button onClick={save} className="gourmand-btn-primary w-full py-4 text-sm">
-                {editItem ? 'Enregistrer les modifications' : 'Ajouter l\'ingrédient'}
+              <button onClick={save} className="gourmand-btn-primary w-full py-4 text-sm mt-2">
+                {editItem ? 'Enregistrer les modifications' : 'Ajouter'}
               </button>
 
               {editItem && (
                 <button
                   onClick={() => { setShowForm(false); setDeleteTarget(editItem); }}
-                  className="w-full py-3 text-[11px] font-black uppercase tracking-widest text-red-400 flex items-center justify-center gap-2"
+                  className="w-full py-3 text-[11px] font-bold uppercase tracking-widest text-red-500 bg-red-50 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors mt-2"
                 >
-                  <Trash2 size={14} /> Supprimer cet ingrédient
+                  <Trash2 size={16} /> Supprimer cet ingrédient
                 </button>
               )}
             </div>
@@ -231,12 +246,11 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, setIngredients
         )}
       </AnimatePresence>
 
-      {/* Delete confirm */}
       <AnimatePresence>
         {deleteTarget && (
           <ConfirmDialog
-            title="Supprimer l'ingrédient"
-            message={`"${deleteTarget.name}" sera retiré de votre inventaire. Les bases et desserts qui l'utilisent ne pourront plus calculer leur coût correctement.`}
+            title="Suppression"
+            message={`Désirez-vous retirer "${deleteTarget.name}" ? Cela impactera les bases et recettes associées.`}
             onConfirm={confirmDelete}
             onCancel={() => setDeleteTarget(null)}
           />

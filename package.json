@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.3",
     "lucide-react": "^0.460.0",
     "motion": "^12.0.0",
     "react": "^19.0.0",

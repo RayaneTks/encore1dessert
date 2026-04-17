@@ -28,3 +28,6 @@ dist-ssr
 .skills/
 brouillon_DA/
 encore1dessert-rework-version/
+
+.vercel
+.env*.local

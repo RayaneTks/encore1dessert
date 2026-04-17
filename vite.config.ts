@@ -9,6 +9,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // On autorise Vite à lire les variables Vercel/Supabase
+  envPrefix: ['VITE_', 'SUPABASE_', 'POSTGRES_', 'NEXT_PUBLIC_', 'encore1dessert_'],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -21,10 +21,10 @@ export const Modal: React.FC<ModalProps> = ({ title, children, onClose }) => {
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         exit={{ y: 100 }}
-        className="relative w-full max-w-[400px] bg-white rounded-[32px] shadow-2xl overflow-hidden"
+        className="relative w-full max-w-[400px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
       >
         <div className="p-6 border-b border-gourmand-border flex justify-between items-center">
-          <h3 className="text-xl font-black italic tracking-tight">{title}</h3>
+          <h3 className="text-xl font-bold tracking-tight">{title}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-gourmand-bg flex items-center justify-center"><X size={18} /></button>
         </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, TrendingUp, Check } from 'lucide-react';
+import { ChevronRight, TrendingUp, Check, Calculator } from 'lucide-react';
 import { Dessert, RawIngredient, Base } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
@@ -59,16 +59,28 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
     if (!selected) return;
     onValidate(selected, qty, priceOverride ? parseFloat(priceOverride) : undefined);
     setValidated(true);
-    showToast(`${qty}× ${selected.name} enregistré — +${fmt(margin * qty)} de marge`);
+    showToast(`${qty}× ${selected.name} enregistré pour la compta.`);
     setTimeout(() => {
       setQty(1);
       setPriceOverride('');
       setValidated(false);
       setShowDetail(false);
-    }, 1500);
+    }, 2000);
   };
 
   const marginColor = marginRate >= 0.6 ? 'text-emerald-400' : marginRate >= 0.4 ? 'text-amber-400' : 'text-red-400';
+
+  if (desserts.length === 0) {
+     return (
+       <div className="h-full px-4 flex flex-col items-center justify-center opacity-50 pb-32">
+          <div className="w-16 h-16 rounded-full bg-gourmand-border/50 flex items-center justify-center mx-auto mb-4">
+             <Calculator size={32} className="text-gourmand-cocoa" />
+          </div>
+          <p className="font-semibold text-lg text-gourmand-chocolate mb-1">Caisse vide</p>
+          <p className="text-sm font-medium text-gourmand-biscuit text-center">Créez d'abord des recettes pour pouvoir encaisser et calculer.</p>
+       </div>
+     );
+  }
 
   return (
     <motion.div
@@ -78,17 +90,16 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
       className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
-        brand="Ventes"
-        title="Nouvelle Vente"
-        description="Sélectionnez un dessert, ajustez et validez pour enregistrer dans la compta."
+        title="Point de Vente"
+        description="Enregistrez vos ventes pour alimenter votre Dashboard de Rentabilité."
       />
 
-      <div className="px-4 space-y-5">
+      <div className="px-4 space-y-4 pt-2">
         {/* Dessert selector */}
-        <SectionCard title="Dessert">
+        <SectionCard title="Produit à encaisser">
           <div className="relative">
             <select
-              className="w-full p-5 bg-white border-2 border-gourmand-border rounded-2xl font-black italic text-lg focus:outline-none focus:border-gourmand-strawberry appearance-none cursor-pointer pr-12 shadow-sm"
+              className="w-full px-5 py-4 bg-white border border-gourmand-border rounded-xl font-semibold text-lg focus:outline-none focus:border-gourmand-chocolate appearance-none cursor-pointer pr-12 shadow-sm text-gourmand-chocolate"
               value={selectedId}
               onChange={e => { setSelectedId(e.target.value); setPriceOverride(''); }}
             >
@@ -96,7 +107,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
                 <option key={d.id} value={d.id}>{d.emoji} {d.name}</option>
               ))}
             </select>
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gourmand-strawberry">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gourmand-biscuit">
               <ChevronRight size={20} className="rotate-90" />
             </div>
           </div>
@@ -105,25 +116,25 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         {/* Quantity + Price override */}
         <div className="grid grid-cols-2 gap-3">
           <SectionCard title="Quantité">
-            <div className="flex items-center justify-between p-3">
-              <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-11 h-11 rounded-xl bg-gourmand-bg flex items-center justify-center font-bold text-xl active:scale-90 transition-transform">−</button>
-              <span className="text-3xl font-black italic">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="w-11 h-11 rounded-xl bg-gourmand-bg flex items-center justify-center font-bold text-xl active:scale-90 transition-transform">+</button>
+            <div className="flex items-center justify-between p-2">
+              <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-12 h-12 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">−</button>
+              <span className="text-3xl font-bold tracking-tight text-gourmand-chocolate">{qty}</span>
+              <button onClick={() => setQty(qty + 1)} className="w-12 h-12 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">+</button>
             </div>
           </SectionCard>
 
-          <SectionCard title="Prix unitaire">
-            <div className="p-3">
+          <SectionCard title="Prix Unitaire (€)">
+            <div className="p-3 bg-white rounded-xl">
               <input
                 type="number"
                 step="0.5"
                 placeholder={selected?.sellPrice.toString() || '0'}
                 value={priceOverride}
                 onChange={e => setPriceOverride(e.target.value)}
-                className="w-full bg-transparent text-center text-3xl font-black italic outline-none placeholder:text-gourmand-cocoa/20"
+                className="w-full bg-transparent text-center text-3xl font-bold tracking-tight outline-none placeholder:text-gourmand-border text-gourmand-chocolate"
               />
-              <p className="text-[9px] text-center text-gourmand-cocoa/40 font-bold uppercase mt-1">
-                {priceOverride ? 'Prix modifié' : 'Prix catalogue'}
+              <p className="text-[9px] text-center text-gourmand-biscuit font-semibold uppercase tracking-widest mt-1">
+                {priceOverride ? 'Prix personnalisé' : 'Prix catalogue'}
               </p>
             </div>
           </SectionCard>
@@ -132,36 +143,36 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         {/* Financial Summary */}
         {selected && (
           <div className="space-y-3">
-            <div className="gourmand-card-dark p-6 relative overflow-hidden">
-              <div className="absolute top-4 right-6 opacity-10"><TrendingUp size={56} /></div>
+            <div className="gourmand-card-dark p-6 relative overflow-hidden shadow-lg shadow-gourmand-chocolate/10">
+              <div className="absolute top-4 right-6 opacity-5"><TrendingUp size={64} /></div>
 
-              <div className="flex justify-between items-end mb-5">
+              <div className="flex justify-between items-end mb-6">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] opacity-40 mb-1">Total CA</p>
-                  <p className="text-3xl font-black italic">{fmt(price * qty)}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest opacity-60 mb-1">Chiffre d'Affaire</p>
+                  <p className="text-3xl font-bold tracking-tight">{fmt(price * qty)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] opacity-40 mb-1">Marge brute</p>
-                  <p className={`text-2xl font-black italic ${marginColor}`}>{fmt(margin * qty)}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest opacity-60 mb-1">Marge Brute</p>
+                  <p className={`text-2xl font-bold tracking-tight ${marginColor}`}>{fmt(margin * qty)}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                <div className="bg-white/5 p-2.5 rounded-xl">
-                  <p className="text-[8px] font-black uppercase opacity-40">Coût unit.</p>
-                  <p className="font-bold text-sm">{fmt(cost)}</p>
+                <div className="bg-white/10 p-3 rounded-xl">
+                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Coût unitaire</p>
+                  <p className="font-semibold text-sm">{fmt(cost)}</p>
                 </div>
-                <div className="bg-white/5 p-2.5 rounded-xl">
-                  <p className="text-[8px] font-black uppercase opacity-40">Marge unit.</p>
-                  <p className="font-bold text-sm">{fmt(margin)}</p>
+                <div className="bg-white/10 p-3 rounded-xl">
+                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Marge unit.</p>
+                  <p className="font-semibold text-sm">{fmt(margin)}</p>
                 </div>
-                <div className="bg-white/5 p-2.5 rounded-xl">
-                  <p className="text-[8px] font-black uppercase opacity-40">Taux</p>
-                  <p className={`font-bold text-sm ${marginColor}`}>{(marginRate * 100).toFixed(0)}%</p>
+                <div className="bg-white/10 p-3 rounded-xl">
+                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Taux</p>
+                  <p className={`font-semibold text-sm ${marginColor}`}>{(marginRate * 100).toFixed(0)}%</p>
                 </div>
-                <div className="bg-white/5 p-2.5 rounded-xl">
-                  <p className="text-[8px] font-black uppercase opacity-40">Coeff</p>
-                  <p className="font-bold text-sm">×{coeff.toFixed(1)}</p>
+                <div className="bg-white/10 p-3 rounded-xl">
+                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Coeff</p>
+                  <p className="font-semibold text-sm">×{coeff.toFixed(1)}</p>
                 </div>
               </div>
             </div>
@@ -169,10 +180,10 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
             {/* Cost Detail Toggle */}
             <button
               onClick={() => setShowDetail(!showDetail)}
-              className="w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-gourmand-biscuit py-1"
+              className="w-full flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit py-2"
             >
-              {showDetail ? 'Masquer le détail' : 'Voir le détail du coût'}
-              <ChevronRight size={14} className={`transition-transform ${showDetail ? 'rotate-90' : ''}`} />
+              {showDetail ? 'Masquer la composition' : 'Voir la composition'}
+              <ChevronRight size={14} className={`transition-transform duration-300 ${showDetail ? 'rotate-90' : ''}`} />
             </button>
 
             <AnimatePresence>
@@ -183,21 +194,21 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="bg-gourmand-bg rounded-2xl p-4 space-y-2">
+                  <div className="bg-gourmand-bg border border-gourmand-border rounded-xl p-4 space-y-2 mt-1">
                     {lines.map((line, idx) => (
                       <div key={idx} className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-gourmand-cocoa/70">
-                          {line.type === 'base' ? '🍯' : '📦'} {line.name}
+                        <span className="font-medium text-gourmand-chocolate">
+                          {line.type === 'base' ? '🍯' : '🍎'} {line.name}
                         </span>
                         <div className="flex items-center gap-3">
-                          <span className="text-gourmand-cocoa/40 font-medium text-xs">{line.quantity}{line.unit}</span>
-                          <span className="font-black w-16 text-right">{fmt(line.lineCost)}</span>
+                          <span className="text-gourmand-biscuit text-xs">{line.quantity}{line.unit}</span>
+                          <span className="font-semibold w-16 text-right text-gourmand-chocolate">{fmt(line.lineCost)}</span>
                         </div>
                       </div>
                     ))}
-                    <div className="border-t border-gourmand-border pt-2 mt-1 flex justify-between">
-                      <span className="text-sm font-black text-gourmand-cocoa/60 uppercase">Total</span>
-                      <span className="font-black text-gourmand-strawberry">{fmt(cost)}</span>
+                    <div className="border-t border-gourmand-border pt-2.5 mt-2 flex justify-between">
+                      <span className="text-xs font-semibold text-gourmand-cocoa uppercase tracking-wide">Coût Technique Total</span>
+                      <span className="font-bold text-gourmand-chocolate">{fmt(cost)}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -211,16 +222,16 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
           onClick={handleValidate}
           disabled={!selected || validated}
           animate={validated ? { scale: [1, 1.05, 1] } : {}}
-          className={`w-full py-5 rounded-[24px] text-md uppercase tracking-widest italic font-black flex items-center justify-center gap-3 transition-all active:scale-[0.95] shadow-xl ${
+          className={`w-full py-5 rounded-xl text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-3 transition-colors active:scale-[0.98] mt-4 ${
             validated
-              ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-              : 'bg-gourmand-strawberry text-white shadow-gourmand-strawberry/20'
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+              : 'bg-gourmand-chocolate text-white shadow-lg shadow-gourmand-chocolate/10 hover:bg-black'
           } disabled:opacity-50`}
         >
           {validated ? (
-            <><Check size={20} strokeWidth={3} /> Enregistré !</>
+            <><Check size={20} strokeWidth={3} /> Enregistré</>
           ) : (
-            'Valider & Enregistrer'
+            'Encaisser'
           )}
         </motion.button>
       </div>
