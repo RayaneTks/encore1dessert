@@ -94,14 +94,14 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.02 }}
-      className="h-full overflow-y-auto scrollbar-hide px-2 pb-24"
+      className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
         title="Point de Vente"
         description="Sélectionnez un produit et enregistrez la vente."
       />
 
-      <div className="px-4 space-y-3">
+      <div className="px-4 space-y-4">
         {/* Banner commandes du jour */}
         <AnimatePresence>
           {todayCommandes.length > 0 && (
@@ -145,33 +145,31 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         </SectionCard>
 
         {/* Quantity + Price override */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 items-start mt-2">
           <SectionCard title="Quantité">
-            <div className="flex items-center justify-between p-2">
-              <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-12 h-12 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">−</button>
+            <div className="flex items-center justify-between">
+              <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-11 h-11 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">−</button>
               <span className="text-3xl font-bold tracking-tight text-gourmand-chocolate">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="w-12 h-12 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">+</button>
+              <button onClick={() => setQty(qty + 1)} className="w-11 h-11 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">+</button>
             </div>
           </SectionCard>
 
           <SectionCard title="Prix Unitaire (€)">
-            <div className="p-3 bg-white rounded-xl">
-              <input
-                type="number"
-                step="0.5"
-                placeholder={selected?.sellPrice.toString() || '0'}
-                value={priceOverride}
-                onChange={e => setPriceOverride(e.target.value)}
-                className="w-full bg-transparent text-center text-3xl font-bold tracking-tight outline-none placeholder:text-gourmand-border text-gourmand-chocolate"
-              />
-              <p className="text-[9px] text-center text-gourmand-biscuit font-semibold uppercase tracking-widest mt-1">
-                {priceOverride ? 'Prix personnalisé' : 'Prix catalogue'}
-              </p>
-            </div>
+            <input
+              type="number"
+              step="0.5"
+              placeholder={selected?.sellPrice.toString() || '0'}
+              value={priceOverride}
+              onChange={e => setPriceOverride(e.target.value)}
+              className="w-full bg-transparent text-center text-3xl font-bold tracking-tight outline-none placeholder:text-gourmand-border text-gourmand-chocolate"
+            />
+            <p className="text-[9px] text-center text-gourmand-biscuit font-semibold uppercase tracking-widest mt-1">
+              {priceOverride ? 'Prix personnalisé' : 'Prix catalogue'}
+            </p>
             {suggestedPrice !== null && (
               <button
                 onClick={() => setPriceOverride(suggestedPrice.toFixed(2))}
-                className="mt-2 w-full text-[10px] font-bold text-gourmand-chocolate/70 bg-gourmand-bg rounded-xl py-2 px-3 text-center active:bg-gourmand-border transition-colors"
+                className="mt-3 w-full text-[10px] font-bold text-gourmand-chocolate/70 bg-gourmand-bg rounded-xl py-2 px-3 text-center active:bg-gourmand-border transition-colors"
               >
                 Suggéré {Math.round(targetMargin * 100)}% → {fmt(suggestedPrice)}
               </button>

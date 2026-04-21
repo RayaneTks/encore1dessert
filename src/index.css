@@ -65,7 +65,7 @@
 }
 
 .section-title {
-  @apply text-xs font-semibold text-gourmand-cocoa ml-4 mb-2;
+  @apply text-xs font-semibold text-gourmand-cocoa ml-4 mb-3;
 }
 
 /* Navigation IOS Native Feeling - Slim & Blurred */
@@ -75,6 +75,7 @@
 
 .app-container {
   @apply relative w-full h-full max-w-[430px] mx-auto bg-gourmand-bg overflow-hidden flex flex-col sm:shadow-[0_0_80px_rgba(0,0,0,0.05)] sm:border-x sm:border-gourmand-border;
+  padding-top: env(safe-area-inset-top);
 }
 
 .safe-area-bottom {

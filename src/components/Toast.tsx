@@ -22,7 +22,7 @@ const colors = {
 
 export const Toast: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
   return (
-    <div className="fixed top-4 left-0 right-0 z-[300] flex flex-col items-center gap-2 pointer-events-none max-w-[430px] mx-auto px-4">
+    <div className="fixed top-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] left-0 right-0 z-[300] flex flex-col items-center gap-2 pointer-events-none max-w-[430px] mx-auto px-4">
       <AnimatePresence>
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />

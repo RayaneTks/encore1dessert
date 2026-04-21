@@ -224,7 +224,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="h-full overflow-y-auto scrollbar-hide pb-32"
+      className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
         brand="Gestion"
@@ -241,7 +241,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       />
 
       {/* Filtres */}
-      <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
+      <div className="px-4 pb-4 flex gap-2 overflow-x-auto scrollbar-hide">
         {(['all', 'pending', 'ready', 'delivered'] as const).map(f => (
           <button
             key={f}
@@ -527,7 +527,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="gourmand-btn-primary w-full"
+                className="gourmand-btn-primary w-full py-4 text-sm"
               >
                 {saving ? 'Enregistrement…' : editing.id === 'cmd-new' ? 'Créer la commande' : 'Enregistrer'}
               </button>
@@ -568,7 +568,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               <button
                 onClick={() => handleConfirmDeliver(true)}
                 disabled={converting}
-                className="gourmand-btn-primary w-full"
+                className="gourmand-btn-primary w-full py-4 text-sm"
               >
                 {converting ? 'Enregistrement…' : 'Enregistrer + Livrer'}
               </button>
