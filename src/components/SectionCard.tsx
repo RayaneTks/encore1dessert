@@ -8,9 +8,9 @@ interface SectionCardProps {
 
 export const SectionCard: React.FC<SectionCardProps> = ({ title, children, padding = true }) => {
   return (
-    <div className="mb-6">
+    <div className="mb-0">
       {title && <h2 className="section-title">{title}</h2>}
-      <div className={`gourmand-card ${padding ? 'p-1' : ''}`}>
+      <div className={`gourmand-card ${padding ? 'p-4' : ''}`}>
         {children}
       </div>
     </div>

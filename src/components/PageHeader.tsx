@@ -9,7 +9,7 @@ interface PageHeaderProps {
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ brand, title, description, action }) => {
   return (
-    <header className="px-6 pt-8 pb-6 sticky top-0 bg-gourmand-bg/90 backdrop-blur-xl z-30">
+    <header className="px-4 pt-8 pb-6 sticky top-0 bg-gourmand-bg/90 backdrop-blur-xl z-30">
       <div className="flex justify-between items-start">
         <div className="max-w-[80%]">
           {brand && <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-2">{brand}</p>}

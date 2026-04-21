@@ -1,5 +1,5 @@
 // ─── Navigation ────────────────────────────────────────────
-export type Tab = 'calculate' | 'desserts' | 'bases' | 'ingredients' | 'history' | 'settings';
+export type Tab = 'calculate' | 'desserts' | 'bases' | 'ingredients' | 'history' | 'commandes' | 'settings';
 
 // ─── Matières Premières (Achats) ───────────────────────────
 export interface RawIngredient {
@@ -73,6 +73,32 @@ export interface HistoryEntry {
   marginRate: number;        // % marge
   linesSnapshot: SnapshotLine[];  // Détail figé complet
 }
+
+// ─── Commandes Client ──────────────────────────────────────
+export type CommandeStatus = 'pending' | 'ready' | 'delivered';
+export type NotifyBefore = 0 | 1 | 2; // jours avant livraison
+
+export interface CommandeItem {
+  dessertId: string | null;
+  dessertName: string;
+  dessertEmoji: string;
+  quantity: number;
+}
+
+export interface Commande {
+  id: string;
+  clientName: string;
+  items: CommandeItem[];        // plusieurs desserts
+  orderDate: string;            // Date de prise de commande (ISO)
+  deliveryDate: string;         // Date de livraison souhaitée (ISO)
+  notes: string;
+  status: CommandeStatus;
+  notifyBefore: NotifyBefore[]; // [0]=jour même, [1]=1j avant, [2]=2j avant
+  createdAt: string;
+}
+
+// ─── Stats ─────────────────────────────────────────────────
+export type StatPeriod = 'week' | 'month' | 'all';
 
 // ─── Toast ─────────────────────────────────────────────────
 export type ToastType = 'success' | 'error' | 'info';

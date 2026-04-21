@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, TrendingUp, Check, Calculator } from 'lucide-react';
-import { Dessert, RawIngredient, Base } from '../types';
+import { ChevronRight, TrendingUp, Check, Calculator, Clock } from 'lucide-react';
+import { Dessert, RawIngredient, Base, Commande, Tab } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import {
@@ -19,11 +19,14 @@ interface Props {
   desserts: Dessert[];
   ingredients: RawIngredient[];
   bases: Base[];
+  commandes: Commande[];
+  setActiveTab: (tab: Tab) => void;
+  targetMargin: number;
   onValidate: (dessert: Dessert, quantity: number, overridePrice?: number) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases, onValidate, showToast }) => {
+export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases, commandes, setActiveTab, targetMargin, onValidate, showToast }) => {
   const [selectedId, setSelectedId] = useState<string>(desserts[0]?.id || '');
   const [qty, setQty] = useState(1);
   const [showDetail, setShowDetail] = useState(false);
@@ -36,6 +39,10 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
   const margin = price - cost;
   const marginRate = price > 0 ? margin / price : 0;
   const coeff = cost > 0 ? price / cost : 0;
+  const suggestedPrice = cost > 0 && targetMargin < 1 ? cost / (1 - targetMargin) : null;
+
+  const todayISO = new Date().toISOString().split('T')[0];
+  const todayCommandes = commandes.filter(c => c.deliveryDate === todayISO && c.status !== 'delivered');
 
   // Resolved component lines for the detail view
   const lines = useMemo(() => {
@@ -87,19 +94,43 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.02 }}
-      className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
+      className="h-full overflow-y-auto scrollbar-hide px-2 pb-24"
     >
       <PageHeader
         title="Point de Vente"
-        description="Enregistrez vos ventes pour alimenter votre Dashboard de Rentabilité."
+        description="Sélectionnez un produit et enregistrez la vente."
       />
 
-      <div className="px-4 space-y-4 pt-2">
+      <div className="px-4 space-y-3">
+        {/* Banner commandes du jour */}
+        <AnimatePresence>
+          {todayCommandes.length > 0 && (
+            <motion.button
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              onClick={() => setActiveTab('commandes')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-left overflow-hidden"
+            >
+              <Clock size={14} className="text-amber-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-amber-700">
+                  {todayCommandes.length} commande{todayCommandes.length > 1 ? 's' : ''} à livrer aujourd'hui
+                </p>
+                <p className="text-[10px] text-amber-600/80 truncate">
+                  {todayCommandes.map(c => c.clientName).join(', ')}
+                </p>
+              </div>
+              <ChevronRight size={14} className="text-amber-500 flex-shrink-0" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         {/* Dessert selector */}
         <SectionCard title="Produit à encaisser">
           <div className="relative">
             <select
-              className="w-full px-5 py-4 bg-white border border-gourmand-border rounded-xl font-semibold text-lg focus:outline-none focus:border-gourmand-chocolate appearance-none cursor-pointer pr-12 shadow-sm text-gourmand-chocolate"
+              className="w-full px-4 py-3 bg-white border border-gourmand-border rounded-xl font-semibold text-base focus:outline-none focus:border-gourmand-chocolate appearance-none cursor-pointer pr-12 shadow-sm text-gourmand-chocolate"
               value={selectedId}
               onChange={e => { setSelectedId(e.target.value); setPriceOverride(''); }}
             >
@@ -137,16 +168,24 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
                 {priceOverride ? 'Prix personnalisé' : 'Prix catalogue'}
               </p>
             </div>
+            {suggestedPrice !== null && (
+              <button
+                onClick={() => setPriceOverride(suggestedPrice.toFixed(2))}
+                className="mt-2 w-full text-[10px] font-bold text-gourmand-chocolate/70 bg-gourmand-bg rounded-xl py-2 px-3 text-center active:bg-gourmand-border transition-colors"
+              >
+                Suggéré {Math.round(targetMargin * 100)}% → {fmt(suggestedPrice)}
+              </button>
+            )}
           </SectionCard>
         </div>
 
         {/* Financial Summary */}
         {selected && (
           <div className="space-y-3">
-            <div className="gourmand-card-dark p-6 relative overflow-hidden shadow-lg shadow-gourmand-chocolate/10">
-              <div className="absolute top-4 right-6 opacity-5"><TrendingUp size={64} /></div>
+            <div className="gourmand-card-dark p-4 relative overflow-hidden shadow-lg shadow-gourmand-chocolate/10">
+              <div className="absolute top-4 right-6 opacity-5"><TrendingUp size={56} /></div>
 
-              <div className="flex justify-between items-end mb-6">
+              <div className="flex justify-between items-end mb-4">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest opacity-60 mb-1">Chiffre d'Affaire</p>
                   <p className="text-3xl font-bold tracking-tight">{fmt(price * qty)}</p>
@@ -157,7 +196,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white/10 p-3 rounded-xl">
                   <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Coût unitaire</p>
                   <p className="font-semibold text-sm">{fmt(cost)}</p>
@@ -222,7 +261,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
           onClick={handleValidate}
           disabled={!selected || validated}
           animate={validated ? { scale: [1, 1.05, 1] } : {}}
-          className={`w-full py-5 rounded-xl text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-3 transition-colors active:scale-[0.98] mt-4 ${
+          className={`w-full py-4 rounded-xl text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-3 transition-colors active:scale-[0.98] mt-2 ${
             validated
               ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
               : 'bg-gourmand-chocolate text-white shadow-lg shadow-gourmand-chocolate/10 hover:bg-black'

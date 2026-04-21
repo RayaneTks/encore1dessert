@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { RawIngredient, Base, BaseComponent, Dessert, DessertComponent, HistoryEntry, SnapshotLine } from '../types';
+import type { RawIngredient, Base, BaseComponent, Dessert, DessertComponent, HistoryEntry, SnapshotLine, Commande, CommandeStatus, CommandeItem, NotifyBefore } from '../types';
 
 // ─── RAW INGREDIENTS ────────────────────────────────────────
 
@@ -267,5 +267,57 @@ export async function insertHistoryEntry(entry: {
 
 export async function deleteHistoryEntry(id: string): Promise<void> {
   const { error } = await supabase.from('history_entries').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ─── COMMANDES ──────────────────────────────────────────────
+
+function rowToCommande(row: any): Commande {
+  return {
+    id: row.id,
+    clientName: row.client_name,
+    items: (row.items as CommandeItem[]) || [],
+    orderDate: row.order_date,
+    deliveryDate: row.delivery_date,
+    notes: row.notes || '',
+    status: row.status as CommandeStatus,
+    notifyBefore: (row.notify_before as NotifyBefore[]) || [],
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchCommandes(): Promise<Commande[]> {
+  const { data, error } = await supabase
+    .from('commandes')
+    .select('*')
+    .order('delivery_date', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(rowToCommande);
+}
+
+export async function upsertCommande(commande: Commande): Promise<Commande> {
+  const isNew = commande.id.startsWith('cmd-');
+  const payload: any = {
+    client_name: commande.clientName,
+    items: commande.items,
+    order_date: commande.orderDate,
+    delivery_date: commande.deliveryDate,
+    notes: commande.notes,
+    status: commande.status,
+    notify_before: commande.notifyBefore,
+  };
+  if (!isNew) payload.id = commande.id;
+
+  const { data, error } = await supabase
+    .from('commandes')
+    .upsert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToCommande(data);
+}
+
+export async function deleteCommande(id: string): Promise<void> {
+  const { error } = await supabase.from('commandes').delete().eq('id', id);
   if (error) throw error;
 }

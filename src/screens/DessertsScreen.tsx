@@ -184,7 +184,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                 {isExpanded && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="px-4 pb-4 space-y-4 border-t border-gourmand-border pt-3 mt-1">
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
                           <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coût unitaire</p>
                           <p className="font-bold text-sm">{fmt(cost)}</p>
@@ -196,6 +196,10 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
                           <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coût / Part</p>
                           <p className="font-bold text-sm">{fmt(costPerServing)}</p>
+                        </div>
+                        <div className="bg-gourmand-bg rounded-xl p-3 text-center">
+                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coefficient</p>
+                          <p className="font-bold text-sm">×{coeff.toFixed(1)}</p>
                         </div>
                       </div>
 
@@ -262,7 +266,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
       <AnimatePresence>
         {showForm && (
           <Modal onClose={() => setShowForm(false)} title={editItem ? 'Éditer' : 'Nouvelle Recette'}>
-            <div className="flex flex-col h-[70vh]">
+            <div className="flex flex-col max-h-[85vh]">
               <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-32 scrollbar-hide">
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">

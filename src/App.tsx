@@ -6,6 +6,7 @@ import {
   Base,
   Dessert,
   HistoryEntry,
+  Commande,
   ToastData,
 } from './types';
 import {
@@ -13,6 +14,7 @@ import {
   createFullSnapshot,
 } from './lib/calculations';
 import * as db from './lib/db';
+import { checkAndFireNotifications, syncAllNotifications } from './lib/notifications';
 
 import { BottomNav } from './components/BottomNav';
 import { Toast } from './components/Toast';
@@ -22,6 +24,7 @@ import { IngredientsScreen } from './screens/IngredientsScreen';
 import { BasesScreen } from './screens/BasesScreen';
 import { DessertsScreen } from './screens/DessertsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
+import { CommandesScreen } from './screens/CommandesScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { InstallPrompt } from './components/InstallPrompt';
 
@@ -34,6 +37,11 @@ export default function App() {
   const [bases, setBases] = useState<Base[]>([]);
   const [desserts, setDesserts] = useState<Dessert[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [commandes, setCommandes] = useState<Commande[]>([]);
+  const [targetMargin, setTargetMargin] = useState<number>(() => {
+    const s = localStorage.getItem('e1d_target_margin');
+    return s ? parseFloat(s) : 0.65;
+  });
 
   // ─── Toast ─────────────────────────────────────────────────
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -49,16 +57,20 @@ export default function App() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [ings, bs, ds, hs] = await Promise.all([
+      const [ings, bs, ds, hs, cmds] = await Promise.all([
         db.fetchIngredients(),
         db.fetchBases(),
         db.fetchDesserts(),
         db.fetchHistory(),
+        db.fetchCommandes(),
       ]);
       setIngredients(ings);
       setBases(bs);
       setDesserts(ds);
       setHistory(hs);
+      setCommandes(cmds);
+      syncAllNotifications(cmds);
+      checkAndFireNotifications(cmds);
     } catch (err) {
       console.error('Fetch error:', err);
       showToast('Erreur de chargement depuis Supabase', 'error');
@@ -188,6 +200,44 @@ export default function App() {
     }
   }, [showToast]);
 
+  // Commandes
+  const handleSaveCommande = useCallback(async (cmd: Commande) => {
+    try {
+      const saved = await db.upsertCommande(cmd);
+      setCommandes(prev => {
+        const updated = (() => {
+          const idx = prev.findIndex(c => c.id === cmd.id);
+          if (idx >= 0) return prev.map(c => c.id === cmd.id ? saved : c);
+          return [...prev, saved];
+        })();
+        syncAllNotifications(updated);
+        return updated;
+      });
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || 'Erreur lors de la sauvegarde', 'error');
+    }
+  }, [showToast]);
+
+  const handleChangeTargetMargin = useCallback((val: number) => {
+    localStorage.setItem('e1d_target_margin', val.toString());
+    setTargetMargin(val);
+  }, []);
+
+  const handleDeleteCommande = useCallback(async (id: string) => {
+    try {
+      await db.deleteCommande(id);
+      setCommandes(prev => {
+        const updated = prev.filter(c => c.id !== id);
+        syncAllNotifications(updated);
+        return updated;
+      });
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || 'Erreur lors de la suppression', 'error');
+    }
+  }, [showToast]);
+
   // ─── Loading ───────────────────────────────────────────────
   if (loading) {
     return (
@@ -213,6 +263,9 @@ export default function App() {
               desserts={desserts}
               ingredients={ingredients}
               bases={bases}
+              commandes={commandes}
+              setActiveTab={setActiveTab}
+              targetMargin={targetMargin}
               onValidate={addHistoryEntry}
               showToast={showToast}
             />
@@ -251,13 +304,28 @@ export default function App() {
             <HistoryScreen
               key="history"
               history={history}
+              commandes={commandes}
+              setActiveTab={setActiveTab}
               onDelete={handleDeleteHistory}
+              showToast={showToast}
+            />
+          )}
+          {activeTab === 'commandes' && (
+            <CommandesScreen
+              key="commandes"
+              commandes={commandes}
+              desserts={desserts}
+              onSave={handleSaveCommande}
+              onDelete={handleDeleteCommande}
+              onAddSale={addHistoryEntry}
               showToast={showToast}
             />
           )}
           {activeTab === 'settings' && (
             <SettingsScreen
               key="settings"
+              targetMargin={targetMargin}
+              onChangeTargetMargin={handleChangeTargetMargin}
               showToast={showToast}
             />
           )}

@@ -1,4 +1,4 @@
-import { RawIngredient, Base, Dessert, SnapshotLine, HistoryEntry } from '../types';
+import { RawIngredient, Base, Dessert, SnapshotLine, HistoryEntry, StatPeriod } from '../types';
 
 // ─── Formatage ─────────────────────────────────────────────
 
@@ -137,7 +137,25 @@ export const createFullSnapshot = (
   });
 };
 
+// ─── Filtrage par période ──────────────────────────────────
+
+export function filterHistoryByPeriod(history: HistoryEntry[], period: StatPeriod): HistoryEntry[] {
+  if (period === 'all') return history;
+  const cutoff = new Date();
+  if (period === 'week') cutoff.setDate(cutoff.getDate() - 7);
+  if (period === 'month') cutoff.setMonth(cutoff.getMonth() - 1);
+  const cutoffISO = cutoff.toISOString();
+  return history.filter(h => h.date >= cutoffISO);
+}
+
 // ─── Comptabilité — Stats Globales ─────────────────────────
+
+interface DessertStatsEntry {
+  name: string;
+  emoji: string;
+  count: number;
+  profit: number;
+}
 
 export interface GlobalStats {
   totalRevenue: number;
@@ -149,6 +167,7 @@ export interface GlobalStats {
   avgMarginPerSale: number;
   topVolume: { name: string; count: number } | null;
   topProfit: { name: string; profit: number } | null;
+  top3Profit: Array<{ name: string; emoji: string; profit: number; count: number }> | null;
 }
 
 export const computeGlobalStats = (history: HistoryEntry[]): GlobalStats => {
@@ -156,7 +175,7 @@ export const computeGlobalStats = (history: HistoryEntry[]): GlobalStats => {
     return {
       totalRevenue: 0, totalCost: 0, totalProfit: 0, marginRate: 0,
       totalSales: 0, totalDessertsSold: 0, avgMarginPerSale: 0,
-      topVolume: null, topProfit: null,
+      topVolume: null, topProfit: null, top3Profit: null,
     };
   }
 
@@ -165,8 +184,7 @@ export const computeGlobalStats = (history: HistoryEntry[]): GlobalStats => {
   let totalProfit = 0;
   let totalDessertsSold = 0;
 
-  const volumeMap = new Map<string, { name: string; count: number }>();
-  const profitMap = new Map<string, { name: string; profit: number }>();
+  const dessertMap = new Map<string, DessertStatsEntry>();
 
   history.forEach(h => {
     totalRevenue += h.totalRevenue;
@@ -174,19 +192,21 @@ export const computeGlobalStats = (history: HistoryEntry[]): GlobalStats => {
     totalProfit += h.totalProfit;
     totalDessertsSold += h.quantitySold;
 
-    // Volume tracking
-    const v = volumeMap.get(h.dessertId) || { name: h.dessertName, count: 0 };
-    v.count += h.quantitySold;
-    volumeMap.set(h.dessertId, v);
-
-    // Profit tracking
-    const p = profitMap.get(h.dessertId) || { name: h.dessertName, profit: 0 };
-    p.profit += h.totalProfit;
-    profitMap.set(h.dessertId, p);
+    const existing = dessertMap.get(h.dessertId) ?? { name: h.dessertName, emoji: h.dessertEmoji, count: 0, profit: 0 };
+    existing.count += h.quantitySold;
+    existing.profit += h.totalProfit;
+    dessertMap.set(h.dessertId, existing);
   });
 
-  const topVolume = Array.from(volumeMap.values()).sort((a, b) => b.count - a.count)[0] || null;
-  const topProfit = Array.from(profitMap.values()).sort((a, b) => b.profit - a.profit)[0] || null;
+  const allEntries = Array.from(dessertMap.values());
+  const sortedByProfit = [...allEntries].sort((a, b) => b.profit - a.profit);
+  const sortedByVolume = [...allEntries].sort((a, b) => b.count - a.count);
+
+  const topVolume = sortedByVolume[0] ? { name: sortedByVolume[0].name, count: sortedByVolume[0].count } : null;
+  const topProfit = sortedByProfit[0] ? { name: sortedByProfit[0].name, profit: sortedByProfit[0].profit } : null;
+  const top3Profit = sortedByProfit.length > 0
+    ? sortedByProfit.slice(0, 3).map(d => ({ name: d.name, emoji: d.emoji, profit: d.profit, count: d.count }))
+    : null;
 
   return {
     totalRevenue,
@@ -198,5 +218,6 @@ export const computeGlobalStats = (history: HistoryEntry[]): GlobalStats => {
     avgMarginPerSale: history.length > 0 ? totalProfit / history.length : 0,
     topVolume,
     topProfit,
+    top3Profit,
   };
 };
