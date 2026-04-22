@@ -148,6 +148,14 @@ export function filterHistoryByPeriod(history: HistoryEntry[], period: StatPerio
   return history.filter(h => h.date >= cutoffISO);
 }
 
+export function filterHistoryByCustomerType(
+  history: HistoryEntry[],
+  customerType: 'all' | 'particulier' | 'pro'
+): HistoryEntry[] {
+  if (customerType === 'all') return history;
+  return history.filter(h => h.customerType === customerType);
+}
+
 // ─── Comptabilité — Stats Globales ─────────────────────────
 
 interface DessertStatsEntry {

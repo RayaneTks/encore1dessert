@@ -6,6 +6,7 @@ export const InstallPrompt: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true);
   const [isIOS, setIsIOS] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     const userAgent = window.navigator.userAgent.toLowerCase();
@@ -24,7 +25,11 @@ export const InstallPrompt: React.FC = () => {
     setIsStandalone(checkStandalone());
   }, []);
 
-  if (!isMobile || isStandalone) {
+  useEffect(() => {
+    setDismissed(sessionStorage.getItem('e1d_install_prompt_dismissed') === '1');
+  }, []);
+
+  if (!isMobile || isStandalone || dismissed) {
     return null;
   }
 
@@ -79,7 +84,18 @@ export const InstallPrompt: React.FC = () => {
              </div>
           )}
         </div>
-        <p className="text-[10px] font-semibold text-gourmand-biscuit uppercase tracking-widest pt-2">L'accès web classique est désactivé sur mobile.</p>
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold text-gourmand-biscuit uppercase tracking-widest pt-2">Installation recommandée pour de meilleures performances.</p>
+          <button
+            onClick={() => {
+              sessionStorage.setItem('e1d_install_prompt_dismissed', '1');
+              setDismissed(true);
+            }}
+            className="text-[12px] font-semibold text-gourmand-cocoa underline"
+          >
+            Continuer sur le web
+          </button>
+        </div>
       </motion.div>
     </div>
   );

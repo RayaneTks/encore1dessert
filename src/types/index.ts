@@ -42,7 +42,8 @@ export interface Dessert {
   name: string;
   components: DessertComponent[];
   emoji: string;
-  sellPrice: number;         // Prix de vente
+  sellPriceParticulier: number; // Prix de vente Particulier
+  sellPricePro: number;         // Prix de vente Pro
   servings: number;          // Nombre de parts
   notes: string;
   createdAt: string;
@@ -67,6 +68,7 @@ export interface HistoryEntry {
   quantitySold: number;
   unitCost: number;          // Coût de revient unitaire figé
   unitPrice: number;         // Prix de vente unitaire figé
+  customerType: 'particulier' | 'pro';
   totalRevenue: number;
   totalCost: number;
   totalProfit: number;
@@ -92,6 +94,7 @@ export interface Commande {
   orderDate: string;            // Date de prise de commande (ISO)
   deliveryDate: string;         // Date de livraison souhaitée (ISO)
   notes: string;
+  customerType: 'particulier' | 'pro';
   status: CommandeStatus;
   notifyBefore: NotifyBefore[]; // [0]=jour même, [1]=1j avant, [2]=2j avant
   createdAt: string;

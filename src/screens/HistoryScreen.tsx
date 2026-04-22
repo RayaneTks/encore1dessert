@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, ChevronDown, X, Settings, ChevronRight } from 'lucide-react';
+import { Trash2, ChevronDown, X, Settings, ChevronRight, SlidersHorizontal, CalendarDays, Users, RotateCcw } from 'lucide-react';
 import { HistoryEntry, Commande, Tab, StatPeriod } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { fmt, fmtPct, computeGlobalStats, filterHistoryByPeriod } from '../lib/calculations';
+import { fmt, fmtPct, computeGlobalStats, filterHistoryByPeriod, filterHistoryByCustomerType } from '../lib/calculations';
 
 interface Props {
   history: HistoryEntry[];
@@ -25,8 +25,12 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<HistoryEntry | null>(null);
   const [period, setPeriod] = useState<StatPeriod>('month');
+  const [customerFilter, setCustomerFilter] = useState<'all' | 'particulier' | 'pro'>('all');
 
-  const filteredHistory = useMemo(() => filterHistoryByPeriod(history, period), [history, period]);
+  const filteredHistory = useMemo(() => {
+    const byPeriod = filterHistoryByPeriod(history, period);
+    return filterHistoryByCustomerType(byPeriod, customerFilter);
+  }, [history, period, customerFilter]);
   const stats = useMemo(() => computeGlobalStats(filteredHistory), [filteredHistory]);
 
   const todayISO = new Date().toISOString().split('T')[0];
@@ -50,6 +54,8 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
   };
 
   const periodLabel = period === 'week' ? '7 derniers jours' : period === 'month' ? '30 derniers jours' : 'Depuis le début';
+  const hasCustomFilters = period !== 'month' || customerFilter !== 'all';
+  const customerLabel = customerFilter === 'all' ? 'Tous clients' : customerFilter === 'pro' ? 'Clients Pro' : 'Clients Particuliers';
 
   return (
     <motion.div
@@ -72,21 +78,75 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
       />
 
       <div className="px-4 space-y-4">
-        {/* Filtre période */}
-        <div className="flex gap-2">
-          {PERIODS.map(p => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
-                period === p.value
-                  ? 'bg-gourmand-chocolate text-white'
-                  : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        {/* Filtres */}
+        <div className="gourmand-card p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal size={14} className="text-gourmand-biscuit" />
+              <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit">Filtres</p>
+            </div>
+            {hasCustomFilters && (
+              <button
+                onClick={() => { setPeriod('month'); setCustomerFilter('all'); }}
+                className="flex items-center gap-1 text-xs font-semibold text-gourmand-biscuit hover:text-gourmand-chocolate transition-colors"
+              >
+                <RotateCcw size={12} />
+                Réinitialiser
+              </button>
+            )}
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit/90 mb-2 flex items-center gap-1.5">
+              <CalendarDays size={12} />
+              Période
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {PERIODS.map(p => (
+                <button
+                  key={p.value}
+                  onClick={() => setPeriod(p.value)}
+                  className={`h-11 rounded-xl text-xs font-semibold transition-all border ${
+                    period === p.value
+                      ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm'
+                      : 'bg-white text-gourmand-biscuit border-gourmand-border'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit/90 mb-2 flex items-center gap-1.5">
+              <Users size={12} />
+              Type client
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: 'all', label: 'Tout' },
+                { value: 'particulier', label: 'Partic.' },
+                { value: 'pro', label: 'Pro' },
+              ] as const).map(f => (
+                <button
+                  key={f.value}
+                  onClick={() => setCustomerFilter(f.value)}
+                  className={`h-11 rounded-xl text-xs font-semibold transition-all border ${
+                    customerFilter === f.value
+                      ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm'
+                      : 'bg-white text-gourmand-biscuit border-gourmand-border'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-gourmand-biscuit font-medium">
+            Affichage: {periodLabel} · {customerLabel}
+          </p>
         </div>
 
         {/* Banner commandes du jour */}
@@ -196,6 +256,13 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
                       <p className="text-[10px] font-medium text-gourmand-biscuit mt-0.5">
                         {new Date(h.date).toLocaleDateString('fr-FR')} · {new Date(h.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
+                      <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        h.customerType === 'pro'
+                          ? 'bg-gourmand-chocolate text-white'
+                          : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
+                      }`}>
+                        {h.customerType === 'pro' ? 'Pro' : 'Particulier'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -229,6 +296,13 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
                     {new Date(selectedEntry.date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                   </p>
                   <h3 className="text-lg font-bold tracking-tight">{selectedEntry.dessertEmoji} {selectedEntry.quantitySold}× {selectedEntry.dessertName}</h3>
+                  <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    selectedEntry.customerType === 'pro'
+                      ? 'bg-gourmand-chocolate text-white'
+                      : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
+                  }`}>
+                    {selectedEntry.customerType === 'pro' ? 'Pro' : 'Particulier'}
+                  </span>
                 </div>
                 <button onClick={() => setSelectedEntry(null)} className="w-8 h-8 rounded-full bg-gourmand-bg flex items-center justify-center text-gourmand-chocolate"><X size={18} /></button>
               </div>

@@ -6,6 +6,8 @@ import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { IconActionButton } from '../components/IconActionButton';
+import { FormLabel } from '../components/FormLabel';
 import { fmt, findIngredient, calculateBaseCost, calculateBaseCostPerKg } from '../lib/calculations';
 
 const CATEGORIES = ['Fond', 'Ganache', 'Insert', 'Coulis', 'Crème', 'Biscuit', 'Autre'];
@@ -91,13 +93,12 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
         title="Préparations"
         description={`${bases.length} base${bases.length > 1 ? 's' : ''} maison`}
         action={
-          <button 
+          <IconActionButton
+            onClick={openAdd}
+            icon={<Plus size={22} />}
+            label="Ajouter une base"
             disabled={ingredients.length === 0}
-            onClick={openAdd} 
-            className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform disabled:opacity-50 disabled:active:scale-100"
-          >
-            <Plus size={22} />
-          </button>
+          />
         }
       />
 
@@ -125,7 +126,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                   <div className="w-12 h-12 rounded-xl bg-gourmand-bg flex items-center justify-center text-2xl border border-gourmand-border/50">{base.emoji}</div>
                   <div>
                     <p className="font-semibold text-base text-gourmand-chocolate">{base.name}</p>
-                    <p className="text-[10px] font-medium text-gourmand-biscuit uppercase mt-1 tracking-wide">
+                    <p className="text-xs font-medium text-gourmand-biscuit uppercase mt-1 tracking-wide">
                       {base.category} · {base.components.length} composant{base.components.length > 1 ? 's' : ''}
                     </p>
                   </div>
@@ -197,22 +198,22 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
             <div className="p-5 space-y-5">
               <div className="flex items-center gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Icône</p>
+                  <FormLabel>Icône</FormLabel>
                   <input type="text" maxLength={2} className="gourmand-input w-16 text-center text-xl text-gourmand-chocolate" value={emoji} onChange={e => setEmoji(e.target.value)} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom</p>
+                  <FormLabel>Nom</FormLabel>
                   <input placeholder="Ex: Pâte sucrée amande" className="gourmand-input w-full" value={name} onChange={e => setName(e.target.value)} />
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Type</p>
+                <FormLabel>Type</FormLabel>
                 <select className="gourmand-input w-full" value={category} onChange={e => setCategory(e.target.value)}>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-3 flex items-center gap-1.5 ml-1">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gourmand-biscuit mb-3 flex items-center gap-1.5 ml-1">
                   <Apple size={14} /> Ingrédients (g)
                 </p>
                 <div className="max-h-52 overflow-y-auto scrollbar-hide space-y-2">
@@ -227,7 +228,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                             className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate shadow-sm transition-colors"
                             onChange={e => { setCompMap(prev => ({ ...prev, [ing.id]: parseFloat(e.target.value) || 0 })); }}
                           />
-                          <span className="text-[10px] font-medium text-gourmand-biscuit w-4">{ingUnit}</span>
+                          <span className="text-xs font-medium text-gourmand-biscuit w-4">{ingUnit}</span>
                         </div>
                       </div>
                     );

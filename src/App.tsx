@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'motion/react';
 import {
   Tab,
@@ -19,14 +19,15 @@ import { checkAndFireNotifications, syncAllNotifications } from './lib/notificat
 import { BottomNav } from './components/BottomNav';
 import { Toast } from './components/Toast';
 
-import { CalculateScreen } from './screens/CalculateScreen';
-import { IngredientsScreen } from './screens/IngredientsScreen';
-import { BasesScreen } from './screens/BasesScreen';
-import { DessertsScreen } from './screens/DessertsScreen';
-import { HistoryScreen } from './screens/HistoryScreen';
-import { CommandesScreen } from './screens/CommandesScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
 import { InstallPrompt } from './components/InstallPrompt';
+
+const CalculateScreen = lazy(() => import('./screens/CalculateScreen').then(m => ({ default: m.CalculateScreen })));
+const IngredientsScreen = lazy(() => import('./screens/IngredientsScreen').then(m => ({ default: m.IngredientsScreen })));
+const BasesScreen = lazy(() => import('./screens/BasesScreen').then(m => ({ default: m.BasesScreen })));
+const DessertsScreen = lazy(() => import('./screens/DessertsScreen').then(m => ({ default: m.DessertsScreen })));
+const HistoryScreen = lazy(() => import('./screens/HistoryScreen').then(m => ({ default: m.HistoryScreen })));
+const CommandesScreen = lazy(() => import('./screens/CommandesScreen').then(m => ({ default: m.CommandesScreen })));
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('calculate');
@@ -165,9 +166,15 @@ export default function App() {
   }, [showToast]);
 
   // History
-  const addHistoryEntry = useCallback(async (dessert: Dessert, quantity: number, overridePrice?: number) => {
+  const addHistoryEntry = useCallback(async (
+    dessert: Dessert,
+    quantity: number,
+    customerType: 'particulier' | 'pro',
+    overridePrice?: number
+  ) => {
     const unitCost = calculateDessertCost(dessert, ingredients, bases);
-    const unitPrice = overridePrice || dessert.sellPrice;
+    const basePrice = customerType === 'pro' ? dessert.sellPricePro : dessert.sellPriceParticulier;
+    const unitPrice = overridePrice || basePrice;
     const totalRevenue = unitPrice * quantity;
     const totalCost = unitCost * quantity;
     const totalProfit = totalRevenue - totalCost;
@@ -181,6 +188,7 @@ export default function App() {
         dessertEmoji: dessert.emoji,
         quantitySold: quantity,
         unitCost, unitPrice, totalRevenue, totalCost, totalProfit, marginRate,
+        customerType,
         linesSnapshot,
       });
       setHistory(prev => [saved, ...prev]);
@@ -256,80 +264,90 @@ export default function App() {
       <Toast toasts={toasts} onDismiss={dismissToast} />
 
       <div className="flex-1 overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          {activeTab === 'calculate' && (
-            <CalculateScreen
-              key="calculate"
-              desserts={desserts}
-              ingredients={ingredients}
-              bases={bases}
-              commandes={commandes}
-              setActiveTab={setActiveTab}
-              targetMargin={targetMargin}
-              onValidate={addHistoryEntry}
-              showToast={showToast}
-            />
-          )}
-          {activeTab === 'desserts' && (
-            <DessertsScreen
-              key="desserts"
-              desserts={desserts}
-              ingredients={ingredients}
-              bases={bases}
-              onSave={handleSaveDessert}
-              onDelete={handleDeleteDessert}
-              showToast={showToast}
-            />
-          )}
-          {activeTab === 'bases' && (
-            <BasesScreen
-              key="bases"
-              bases={bases}
-              ingredients={ingredients}
-              onSave={handleSaveBase}
-              onDelete={handleDeleteBase}
-              showToast={showToast}
-            />
-          )}
-          {activeTab === 'ingredients' && (
-            <IngredientsScreen
-              key="ingredients"
-              ingredients={ingredients}
-              onSave={handleSaveIngredient}
-              onDelete={handleDeleteIngredient}
-              showToast={showToast}
-            />
-          )}
-          {activeTab === 'history' && (
-            <HistoryScreen
-              key="history"
-              history={history}
-              commandes={commandes}
-              setActiveTab={setActiveTab}
-              onDelete={handleDeleteHistory}
-              showToast={showToast}
-            />
-          )}
-          {activeTab === 'commandes' && (
-            <CommandesScreen
-              key="commandes"
-              commandes={commandes}
-              desserts={desserts}
-              onSave={handleSaveCommande}
-              onDelete={handleDeleteCommande}
-              onAddSale={addHistoryEntry}
-              showToast={showToast}
-            />
-          )}
-          {activeTab === 'settings' && (
-            <SettingsScreen
-              key="settings"
-              targetMargin={targetMargin}
-              onChangeTargetMargin={handleChangeTargetMargin}
-              showToast={showToast}
-            />
-          )}
-        </AnimatePresence>
+        <Suspense
+          fallback={
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-gourmand-chocolate border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs font-semibold text-gourmand-biscuit">Chargement de l'écran...</p>
+              </div>
+            </div>
+          }
+        >
+          <AnimatePresence mode="wait">
+            {activeTab === 'calculate' && (
+              <CalculateScreen
+                key="calculate"
+                desserts={desserts}
+                ingredients={ingredients}
+                bases={bases}
+                commandes={commandes}
+                setActiveTab={setActiveTab}
+                targetMargin={targetMargin}
+                onValidate={addHistoryEntry}
+                showToast={showToast}
+              />
+            )}
+            {activeTab === 'desserts' && (
+              <DessertsScreen
+                key="desserts"
+                desserts={desserts}
+                ingredients={ingredients}
+                bases={bases}
+                onSave={handleSaveDessert}
+                onDelete={handleDeleteDessert}
+                showToast={showToast}
+              />
+            )}
+            {activeTab === 'bases' && (
+              <BasesScreen
+                key="bases"
+                bases={bases}
+                ingredients={ingredients}
+                onSave={handleSaveBase}
+                onDelete={handleDeleteBase}
+                showToast={showToast}
+              />
+            )}
+            {activeTab === 'ingredients' && (
+              <IngredientsScreen
+                key="ingredients"
+                ingredients={ingredients}
+                onSave={handleSaveIngredient}
+                onDelete={handleDeleteIngredient}
+                showToast={showToast}
+              />
+            )}
+            {activeTab === 'history' && (
+              <HistoryScreen
+                key="history"
+                history={history}
+                commandes={commandes}
+                setActiveTab={setActiveTab}
+                onDelete={handleDeleteHistory}
+                showToast={showToast}
+              />
+            )}
+            {activeTab === 'commandes' && (
+              <CommandesScreen
+                key="commandes"
+                commandes={commandes}
+                desserts={desserts}
+                onSave={handleSaveCommande}
+                onDelete={handleDeleteCommande}
+                onAddSale={addHistoryEntry}
+                showToast={showToast}
+              />
+            )}
+            {activeTab === 'settings' && (
+              <SettingsScreen
+                key="settings"
+                targetMargin={targetMargin}
+                onChangeTargetMargin={handleChangeTargetMargin}
+              />
+            )}
+          </AnimatePresence>
+        </Suspense>
       </div>
 
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />

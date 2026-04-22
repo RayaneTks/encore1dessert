@@ -19,13 +19,14 @@ const tabs: { id: Tab; label: string; icon: React.FC<any> }[] = [
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
   return (
-    <nav className="nav-blur h-[84px] fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-1 flex justify-between items-start pt-3 z-[100] safe-area-bottom">
+    <nav className="nav-blur h-[88px] fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-1 flex justify-between items-start pt-2 z-[100] safe-area-bottom">
       <LayoutGroup>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`relative flex flex-col items-center gap-1 flex-1 transition-colors duration-200 ${
+            aria-label={`Ouvrir ${tab.label}`}
+            className={`relative flex flex-col items-center justify-center gap-1 flex-1 min-h-[44px] transition-colors duration-200 ${
               activeTab === tab.id ? 'text-gourmand-chocolate' : 'text-gourmand-biscuit'
             }`}
           >
@@ -38,7 +39,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
             >
               <tab.icon size={20} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
             </motion.div>
-            <span className={`text-[9px] font-medium tracking-tight transition-all duration-200 ${activeTab === tab.id ? 'opacity-100' : 'opacity-70'}`}>
+            <span className={`text-[10px] font-semibold tracking-tight transition-all duration-200 ${activeTab === tab.id ? 'opacity-100' : 'opacity-70'}`}>
               {tab.label}
             </span>
           </button>

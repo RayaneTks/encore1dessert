@@ -5,6 +5,8 @@ import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert } from '.
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { IconActionButton } from '../components/IconActionButton';
+import { FormLabel } from '../components/FormLabel';
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -16,7 +18,7 @@ interface Props {
   desserts: Dessert[];
   onSave: (cmd: Commande) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onAddSale: (dessert: Dessert, quantity: number) => Promise<void>;
+  onAddSale: (dessert: Dessert, quantity: number, customerType: 'particulier' | 'pro') => Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
@@ -90,6 +92,7 @@ const BLANK: Commande = {
   orderDate: todayISO,
   deliveryDate: todayISO,
   notes: '',
+  customerType: 'particulier',
   status: 'pending',
   notifyBefore: [1],
   createdAt: '',
@@ -200,7 +203,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
           if (!item.dessertId) { skipped++; continue; }
           const dessert = desserts.find(d => d.id === item.dessertId);
           if (!dessert) { skipped++; continue; }
-          await onAddSale(dessert, item.quantity);
+          await onAddSale(dessert, item.quantity, deliverTarget.customerType);
         }
         if (skipped > 0) showToast(`${skipped} article(s) ignoré(s) — dessert introuvable`, 'info');
       }
@@ -231,22 +234,22 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         title="Commandes"
         description={`${pendingCount} en attente · ${commandes.length} total`}
         action={
-          <button
+          <IconActionButton
+            size="compact"
             onClick={openNew}
-            className="w-10 h-10 rounded-full bg-gourmand-chocolate text-white flex items-center justify-center shadow-md flex-shrink-0"
-          >
-            <Plus size={20} />
-          </button>
+            icon={<Plus size={18} strokeWidth={2.25} />}
+            label="Ajouter une commande"
+          />
         }
       />
 
       {/* Filtres */}
-      <div className="px-4 pb-4 flex gap-2 overflow-x-auto scrollbar-hide">
+      <div className="px-4 pb-3 flex gap-1.5 overflow-x-auto scrollbar-hide">
         {(['all', 'pending', 'ready', 'delivered'] as const).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${
               filter === f
                 ? 'bg-gourmand-chocolate text-white'
                 : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
@@ -261,14 +264,14 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       {notifPerm === 'default' && isNotificationSupported() && (
         <div className="mx-4 mb-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 flex items-center gap-3">
           <Bell size={16} className="text-amber-600 flex-shrink-0" />
-          <p className="text-[11px] text-amber-700 font-medium flex-1">Autorise les notifications pour les rappels de commandes</p>
-          <button onClick={handleRequestPerm} className="text-[11px] font-bold text-amber-700 underline whitespace-nowrap">Activer</button>
+          <p className="text-xs text-amber-700 font-medium flex-1">Autorise les notifications pour les rappels de commandes</p>
+          <button onClick={handleRequestPerm} className="text-xs font-bold text-amber-700 underline whitespace-nowrap">Activer</button>
         </div>
       )}
       {notifPerm === 'denied' && (
         <div className="mx-4 mb-3 p-3 rounded-2xl bg-red-50 border border-red-200 flex items-center gap-3">
           <BellOff size={16} className="text-red-500 flex-shrink-0" />
-          <p className="text-[11px] text-red-600 font-medium">{'Notifications bloquées. Autorise dans Réglages > Safari > Notifications.'}</p>
+          <p className="text-xs text-red-600 font-medium">{'Notifications bloquées. Autorise dans Réglages > Safari > Notifications.'}</p>
         </div>
       )}
 
@@ -294,7 +297,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className={`gourmand-card border-2 p-4 cursor-pointer ${urgencyClass(cmd.deliveryDate, cmd.status)}`}
+                className={`gourmand-card border p-3 cursor-pointer ${urgencyClass(cmd.deliveryDate, cmd.status)}`}
                 onClick={() => openEdit(cmd)}
               >
                 <div className="flex items-start gap-3">
@@ -311,10 +314,17 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm truncate">{cmd.clientName}</span>
+                  <span className={`gourmand-chip ${
+                    cmd.customerType === 'pro'
+                      ? 'bg-gourmand-chocolate text-white'
+                      : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
+                  }`}>
+                    {cmd.customerType === 'pro' ? 'Pro' : 'Particulier'}
+                  </span>
                       {badge && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                        <span className={`gourmand-chip ${badge.cls}`}>{badge.label}</span>
                       )}
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ml-auto ${
+                      <span className={`gourmand-chip ml-auto ${
                         cmd.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                         cmd.status === 'ready' ? 'bg-blue-100 text-blue-700' :
                         'bg-emerald-100 text-emerald-600'
@@ -326,11 +336,11 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                       {itemsSummary(cmd.items)}
                     </p>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <span className="flex items-center gap-1 text-[10px] text-gourmand-biscuit">
+                      <span className="flex items-center gap-1 text-xs text-gourmand-biscuit">
                         <Clock size={10} />
                         {formatDate(cmd.deliveryDate)}
                       </span>
-                      <span className="text-[10px] text-gourmand-biscuit">
+                      <span className="text-xs text-gourmand-biscuit">
                         {pieces} pièce{pieces > 1 ? 's' : ''}
                       </span>
                       {cmd.notifyBefore.length > 0 && (
@@ -338,36 +348,41 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                       )}
                     </div>
                     {cmd.notes ? (
-                      <p className="text-[10px] text-gourmand-biscuit/70 mt-1 italic truncate">{cmd.notes}</p>
+                      <p className="text-xs text-gourmand-biscuit/70 mt-1 italic truncate">{cmd.notes}</p>
                     ) : null}
                   </div>
                   <ChevronRight size={16} className="text-gourmand-biscuit/40 flex-shrink-0 mt-1" />
                 </div>
 
                 {nextStatus && (
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-gourmand-border/50">
+                  <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-gourmand-border/50 items-center">
                     <button
+                      type="button"
                       onClick={e => { e.stopPropagation(); handleAdvanceStatus(cmd); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gourmand-chocolate text-white text-[11px] font-semibold"
+                      className="gourmand-btn-primary-compact"
                     >
-                      <Check size={12} />
+                      <Check size={14} strokeWidth={2.5} />
                       {STATUS_NEXT_LABEL[cmd.status]}
                     </button>
                     <button
+                      type="button"
+                      aria-label="Supprimer la commande"
                       onClick={e => { e.stopPropagation(); setDeleteTarget(cmd); }}
-                      className="ml-auto p-1.5 rounded-xl text-red-400 hover:bg-red-50"
+                      className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-400 hover:bg-red-50"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} strokeWidth={2} />
                     </button>
                   </div>
                 )}
                 {!nextStatus && (
                   <div className="flex justify-end mt-2">
                     <button
+                      type="button"
+                      aria-label="Supprimer la commande"
                       onClick={e => { e.stopPropagation(); setDeleteTarget(cmd); }}
-                      className="p-1.5 rounded-xl text-red-300 hover:bg-red-50"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-300 hover:bg-red-50"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} strokeWidth={2} />
                     </button>
                   </div>
                 )}
@@ -384,11 +399,11 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             title={editing.id === 'cmd-new' ? 'Nouvelle commande' : 'Modifier la commande'}
             onClose={() => setModalOpen(false)}
           >
-            <div className="p-6 space-y-5">
+            <div className="p-5 space-y-6">
 
               {/* Client */}
               <div>
-                <label className="text-xs font-bold text-gourmand-biscuit uppercase tracking-wider mb-1.5 block">Nom du client</label>
+                <FormLabel>Nom du client</FormLabel>
                 <input
                   className="gourmand-input w-full"
                   placeholder="Ex : Marie Dupont"
@@ -399,16 +414,19 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
               {/* Desserts */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-gourmand-biscuit uppercase tracking-wider">Desserts commandés</label>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">
+                    Desserts commandés
+                  </span>
                   <button
+                    type="button"
                     onClick={addItem}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-gourmand-chocolate"
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-gourmand-chocolate active:bg-gourmand-bg"
                   >
-                    <Plus size={12} /> Ajouter
+                    <Plus size={14} strokeWidth={2.25} /> Ajouter
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {editing.items.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <span className="text-lg">{item.dessertEmoji}</span>
@@ -442,7 +460,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-gourmand-biscuit uppercase tracking-wider mb-1.5 block">Commande le</label>
+                  <FormLabel>Commande le</FormLabel>
                   <input
                     type="date"
                     className="gourmand-input w-full"
@@ -451,7 +469,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gourmand-biscuit uppercase tracking-wider mb-1.5 block">Livraison le</label>
+                  <FormLabel>Livraison le</FormLabel>
                   <input
                     type="date"
                     className="gourmand-input w-full"
@@ -461,24 +479,57 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 </div>
               </div>
 
+              <div>
+                <FormLabel>Type client</FormLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
+                    className={`gourmand-segment-compact ${
+                      editing.customerType === 'particulier'
+                        ? 'gourmand-segment-active'
+                        : 'gourmand-segment-idle'
+                    }`}
+                  >
+                    Particulier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
+                    className={`gourmand-segment-compact ${
+                      editing.customerType === 'pro'
+                        ? 'gourmand-segment-active'
+                        : 'gourmand-segment-idle'
+                    }`}
+                  >
+                    Pro
+                  </button>
+                </div>
+              </div>
+
               {/* Notifications */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Bell size={13} className="text-gourmand-biscuit" />
-                  <label className="text-xs font-bold text-gourmand-biscuit uppercase tracking-wider">Rappels</label>
+                  <Bell size={14} className="text-gourmand-biscuit shrink-0" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Rappels</span>
                   {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
-                    <button onClick={handleRequestPerm} className="ml-auto text-[10px] font-bold text-gourmand-biscuit underline">
+                    <button
+                      type="button"
+                      onClick={handleRequestPerm}
+                      className="ml-auto text-[11px] font-semibold text-gourmand-chocolate underline"
+                    >
                       {notifPerm === 'denied' ? 'Bloqué' : 'Activer'}
                     </button>
                   )}
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap">
                   {NOTIFY_OPTIONS.map(opt => (
                     <button
+                      type="button"
                       key={opt.value}
                       onClick={() => toggleNotify(opt.value)}
                       disabled={notifPerm === 'denied' || notifPerm === 'unsupported'}
-                      className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold border transition-all disabled:opacity-40 ${
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all disabled:opacity-40 ${
                         editing.notifyBefore.includes(opt.value)
                           ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
                           : 'bg-white text-gourmand-biscuit border-gourmand-border'
@@ -489,17 +540,17 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   ))}
                 </div>
                 {notifPerm === 'unsupported' && (
-                  <p className="text-[10px] text-gourmand-biscuit/60 mt-1.5">Notifications non supportées sur cet appareil.</p>
+                  <p className="text-xs text-gourmand-biscuit/60 mt-2">Notifications non supportées sur cet appareil.</p>
                 )}
                 {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
-                  <p className="text-[10px] text-gourmand-biscuit/60 mt-1.5">Active les notifications pour recevoir des rappels à 8h.</p>
+                  <p className="text-xs text-gourmand-biscuit/60 mt-2">Active les notifications pour recevoir des rappels à 8h.</p>
                 )}
               </div>
 
               {/* Statut (edit only) */}
               {editing.id !== 'cmd-new' && (
                 <div>
-                  <label className="text-xs font-bold text-gourmand-biscuit uppercase tracking-wider mb-1.5 block">Statut</label>
+                  <FormLabel>Statut</FormLabel>
                   <select
                     className="gourmand-input w-full"
                     value={editing.status}
@@ -514,10 +565,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
               {/* Notes */}
               <div>
-                <label className="text-xs font-bold text-gourmand-biscuit uppercase tracking-wider mb-1.5 block">Notes</label>
+                <FormLabel>Notes</FormLabel>
                 <textarea
-                  className="gourmand-input w-full resize-none"
-                  rows={2}
+                  className="gourmand-input w-full resize-none min-h-[88px]"
+                  rows={3}
                   placeholder="Allergies, adresse, personnalisation…"
                   value={editing.notes}
                   onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
@@ -525,9 +576,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               </div>
 
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="gourmand-btn-primary w-full py-4 text-sm"
+                className="gourmand-btn-primary-compact w-full"
               >
                 {saving ? 'Enregistrement…' : editing.id === 'cmd-new' ? 'Créer la commande' : 'Enregistrer'}
               </button>
@@ -554,8 +606,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             title="Marquer comme livrée ?"
             onClose={() => !converting && setDeliverTarget(null)}
           >
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-gourmand-cocoa/70 font-medium leading-relaxed">
+            <div className="p-5 space-y-5">
+              <p className="text-sm text-gourmand-cocoa/75 font-medium leading-relaxed">
                 Enregistrer cette commande comme vente dans le Dashboard ?
               </p>
               <div className="bg-gourmand-bg rounded-xl p-3 space-y-1.5">
@@ -566,16 +618,18 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 ))}
               </div>
               <button
+                type="button"
                 onClick={() => handleConfirmDeliver(true)}
                 disabled={converting}
-                className="gourmand-btn-primary w-full py-4 text-sm"
+                className="gourmand-btn-primary-compact w-full"
               >
                 {converting ? 'Enregistrement…' : 'Enregistrer + Livrer'}
               </button>
               <button
+                type="button"
                 onClick={() => handleConfirmDeliver(false)}
                 disabled={converting}
-                className="w-full py-3 text-sm font-bold text-gourmand-biscuit text-center disabled:opacity-40"
+                className="w-full rounded-lg border border-gourmand-border bg-white py-2.5 text-xs font-semibold text-gourmand-cocoa active:bg-gourmand-bg disabled:opacity-40 transition-colors"
               >
                 Livrer uniquement (sans vente)
               </button>

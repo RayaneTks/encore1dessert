@@ -132,11 +132,19 @@ export async function fetchDesserts(): Promise<Dessert[]> {
   if (dessertsRes.error) throw dessertsRes.error;
   if (compsRes.error) throw compsRes.error;
 
-  return (dessertsRes.data || []).map(d => ({
+  return (dessertsRes.data || []).map(d => {
+    const legacySellPrice = Number(d.sell_price ?? 0);
+    const rawParticulier = Number(d.sell_price_particulier ?? 0);
+    const rawPro = Number(d.sell_price_pro ?? 0);
+    const sellPriceParticulier = rawParticulier > 0 ? rawParticulier : legacySellPrice;
+    const sellPricePro = rawPro > 0 ? rawPro : legacySellPrice;
+
+    return {
     id: d.id,
     name: d.name,
     emoji: d.emoji,
-    sellPrice: Number(d.sell_price),
+    sellPriceParticulier,
+    sellPricePro,
     servings: d.servings,
     notes: d.notes || '',
     createdAt: d.created_at,
@@ -147,7 +155,8 @@ export async function fetchDesserts(): Promise<Dessert[]> {
         id: c.type === 'base' ? c.base_id : c.ingredient_id,
         quantity: Number(c.quantity),
       })),
-  }));
+  };
+  });
 }
 
 export async function upsertDessert(dessert: Dessert): Promise<Dessert> {
@@ -155,7 +164,8 @@ export async function upsertDessert(dessert: Dessert): Promise<Dessert> {
   const payload: any = {
     name: dessert.name,
     emoji: dessert.emoji,
-    sell_price: dessert.sellPrice,
+    sell_price_particulier: dessert.sellPriceParticulier,
+    sell_price_pro: dessert.sellPricePro,
     servings: dessert.servings,
     notes: dessert.notes,
   };
@@ -209,6 +219,7 @@ export async function fetchHistory(): Promise<HistoryEntry[]> {
     quantitySold: h.quantity_sold,
     unitCost: Number(h.unit_cost),
     unitPrice: Number(h.unit_price),
+    customerType: (h.customer_type as 'particulier' | 'pro') || 'particulier',
     totalRevenue: Number(h.total_revenue),
     totalCost: Number(h.total_cost),
     totalProfit: Number(h.total_profit),
@@ -224,6 +235,7 @@ export async function insertHistoryEntry(entry: {
   quantitySold: number;
   unitCost: number;
   unitPrice: number;
+  customerType: 'particulier' | 'pro';
   totalRevenue: number;
   totalCost: number;
   totalProfit: number;
@@ -239,6 +251,7 @@ export async function insertHistoryEntry(entry: {
       quantity_sold: entry.quantitySold,
       unit_cost: entry.unitCost,
       unit_price: entry.unitPrice,
+      customer_type: entry.customerType,
       total_revenue: entry.totalRevenue,
       total_cost: entry.totalCost,
       total_profit: entry.totalProfit,
@@ -257,6 +270,7 @@ export async function insertHistoryEntry(entry: {
     quantitySold: data.quantity_sold,
     unitCost: Number(data.unit_cost),
     unitPrice: Number(data.unit_price),
+    customerType: (data.customer_type as 'particulier' | 'pro') || 'particulier',
     totalRevenue: Number(data.total_revenue),
     totalCost: Number(data.total_cost),
     totalProfit: Number(data.total_profit),
@@ -280,6 +294,7 @@ function rowToCommande(row: any): Commande {
     orderDate: row.order_date,
     deliveryDate: row.delivery_date,
     notes: row.notes || '',
+    customerType: (row.customer_type as 'particulier' | 'pro') || 'particulier',
     status: row.status as CommandeStatus,
     notifyBefore: (row.notify_before as NotifyBefore[]) || [],
     createdAt: row.created_at,
@@ -303,6 +318,7 @@ export async function upsertCommande(commande: Commande): Promise<Commande> {
     order_date: commande.orderDate,
     delivery_date: commande.deliveryDate,
     notes: commande.notes,
+    customer_type: commande.customerType,
     status: commande.status,
     notify_before: commande.notifyBefore,
   };

@@ -22,7 +22,7 @@ interface Props {
   commandes: Commande[];
   setActiveTab: (tab: Tab) => void;
   targetMargin: number;
-  onValidate: (dessert: Dessert, quantity: number, overridePrice?: number) => void;
+  onValidate: (dessert: Dessert, quantity: number, customerType: 'particulier' | 'pro', overridePrice?: number) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
@@ -31,11 +31,15 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
   const [qty, setQty] = useState(1);
   const [showDetail, setShowDetail] = useState(false);
   const [priceOverride, setPriceOverride] = useState('');
+  const [customerType, setCustomerType] = useState<'particulier' | 'pro'>('particulier');
   const [validated, setValidated] = useState(false);
 
   const selected = desserts.find(d => d.id === selectedId);
   const cost = selected ? calculateDessertCost(selected, ingredients, bases) : 0;
-  const price = priceOverride ? parseFloat(priceOverride) : (selected?.sellPrice || 0);
+  const selectedBasePrice = selected
+    ? (customerType === 'pro' ? selected.sellPricePro : selected.sellPriceParticulier)
+    : 0;
+  const price = priceOverride ? parseFloat(priceOverride) : selectedBasePrice;
   const margin = price - cost;
   const marginRate = price > 0 ? margin / price : 0;
   const coeff = cost > 0 ? price / cost : 0;
@@ -64,9 +68,9 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
 
   const handleValidate = () => {
     if (!selected) return;
-    onValidate(selected, qty, priceOverride ? parseFloat(priceOverride) : undefined);
+    onValidate(selected, qty, customerType, priceOverride ? parseFloat(priceOverride) : undefined);
     setValidated(true);
-    showToast(`${qty}× ${selected.name} enregistré pour la compta.`);
+    showToast(`${qty}× ${selected.name} enregistré (${customerType === 'pro' ? 'Pro' : 'Particulier'}).`);
     setTimeout(() => {
       setQty(1);
       setPriceOverride('');
@@ -114,10 +118,10 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
             >
               <Clock size={14} className="text-amber-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-bold text-amber-700">
+                <p className="text-xs font-bold text-amber-700">
                   {todayCommandes.length} commande{todayCommandes.length > 1 ? 's' : ''} à livrer aujourd'hui
                 </p>
-                <p className="text-[10px] text-amber-600/80 truncate">
+                <p className="text-xs text-amber-600/80 truncate">
                   {todayCommandes.map(c => c.clientName).join(', ')}
                 </p>
               </div>
@@ -144,6 +148,31 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
           </div>
         </SectionCard>
 
+        <SectionCard title="Type client">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => { setCustomerType('particulier'); setPriceOverride(''); }}
+              className={`gourmand-segment ${
+                customerType === 'particulier'
+                  ? 'gourmand-segment-active'
+                  : 'gourmand-segment-idle'
+              }`}
+            >
+              Particulier
+            </button>
+            <button
+              onClick={() => { setCustomerType('pro'); setPriceOverride(''); }}
+              className={`gourmand-segment ${
+                customerType === 'pro'
+                  ? 'gourmand-segment-active'
+                  : 'gourmand-segment-idle'
+              }`}
+            >
+              Pro
+            </button>
+          </div>
+        </SectionCard>
+
         {/* Quantity + Price override */}
         <div className="grid grid-cols-2 gap-3 items-start mt-2">
           <SectionCard title="Quantité">
@@ -158,18 +187,18 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
             <input
               type="number"
               step="0.5"
-              placeholder={selected?.sellPrice.toString() || '0'}
+              placeholder={selectedBasePrice.toString() || '0'}
               value={priceOverride}
               onChange={e => setPriceOverride(e.target.value)}
               className="w-full bg-transparent text-center text-3xl font-bold tracking-tight outline-none placeholder:text-gourmand-border text-gourmand-chocolate"
             />
-            <p className="text-[9px] text-center text-gourmand-biscuit font-semibold uppercase tracking-widest mt-1">
+            <p className="text-xs text-center text-gourmand-biscuit font-semibold uppercase tracking-widest mt-1">
               {priceOverride ? 'Prix personnalisé' : 'Prix catalogue'}
             </p>
             {suggestedPrice !== null && (
               <button
                 onClick={() => setPriceOverride(suggestedPrice.toFixed(2))}
-                className="mt-3 w-full text-[10px] font-bold text-gourmand-chocolate/70 bg-gourmand-bg rounded-xl py-2 px-3 text-center active:bg-gourmand-border transition-colors"
+                className="gourmand-btn-secondary mt-3 w-full text-xs"
               >
                 Suggéré {Math.round(targetMargin * 100)}% → {fmt(suggestedPrice)}
               </button>
@@ -185,30 +214,30 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
 
               <div className="flex justify-between items-end mb-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest opacity-60 mb-1">Chiffre d'Affaire</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Chiffre d'Affaire</p>
                   <p className="text-3xl font-bold tracking-tight">{fmt(price * qty)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest opacity-60 mb-1">Marge Brute</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Marge Brute</p>
                   <p className={`text-2xl font-bold tracking-tight ${marginColor}`}>{fmt(margin * qty)}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Coût unitaire</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Coût unitaire</p>
                   <p className="font-semibold text-sm">{fmt(cost)}</p>
                 </div>
                 <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Marge unit.</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Marge unit.</p>
                   <p className="font-semibold text-sm">{fmt(margin)}</p>
                 </div>
                 <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Taux</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Taux</p>
                   <p className={`font-semibold text-sm ${marginColor}`}>{(marginRate * 100).toFixed(0)}%</p>
                 </div>
                 <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-1">Coeff</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Coeff</p>
                   <p className="font-semibold text-sm">×{coeff.toFixed(1)}</p>
                 </div>
               </div>
@@ -217,7 +246,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
             {/* Cost Detail Toggle */}
             <button
               onClick={() => setShowDetail(!showDetail)}
-              className="w-full flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit py-2"
+              className="w-full flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-widest text-gourmand-biscuit py-2"
             >
               {showDetail ? 'Masquer la composition' : 'Voir la composition'}
               <ChevronRight size={14} className={`transition-transform duration-300 ${showDetail ? 'rotate-90' : ''}`} />

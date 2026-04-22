@@ -5,6 +5,8 @@ import { Dessert, RawIngredient, Base } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { IconActionButton } from '../components/IconActionButton';
+import { FormLabel } from '../components/FormLabel';
 import { fmt, calculateDessertCost, resolveComponentName, resolveComponentUnit, findIngredient, calculateBaseCostPerKg, findBase } from '../lib/calculations';
 
 interface Props {
@@ -26,14 +28,15 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
   // Form state
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🍰');
-  const [sellPrice, setSellPrice] = useState('');
+  const [sellPriceParticulier, setSellPriceParticulier] = useState('');
+  const [sellPricePro, setSellPricePro] = useState('');
   const [servings, setServings] = useState('8');
   const [notes, setNotes] = useState('');
   const [compMap, setCompMap] = useState<Record<string, { type: 'ingredient' | 'base'; qty: number }>>({});
 
   const openAdd = () => {
     setEditItem(null);
-    setName(''); setEmoji('🍰'); setSellPrice(''); setServings('8'); setNotes('');
+    setName(''); setEmoji('🍰'); setSellPriceParticulier(''); setSellPricePro(''); setServings('8'); setNotes('');
     setCompMap({});
     setShowForm(true);
   };
@@ -42,7 +45,8 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
     setEditItem(d);
     setName(d.name);
     setEmoji(d.emoji);
-    setSellPrice(d.sellPrice.toString());
+    setSellPriceParticulier(d.sellPriceParticulier.toString());
+    setSellPricePro(d.sellPricePro.toString());
     setServings(d.servings.toString());
     setNotes(d.notes);
     const map: Record<string, { type: 'ingredient' | 'base'; qty: number }> = {};
@@ -53,8 +57,10 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
   const save = async () => {
     if (!name.trim()) { showToast('Veuillez saisir un nom', 'error'); return; }
-    const sellPriceVal = parseFloat(sellPrice);
-    if (isNaN(sellPriceVal) || sellPriceVal < 0) { showToast('Prix de vente invalide', 'error'); return; }
+    const sellPriceParticulierVal = parseFloat(sellPriceParticulier);
+    if (isNaN(sellPriceParticulierVal) || sellPriceParticulierVal < 0) { showToast('Prix Particulier invalide', 'error'); return; }
+    const sellPriceProVal = parseFloat(sellPricePro);
+    if (isNaN(sellPriceProVal) || sellPriceProVal < 0) { showToast('Prix Pro invalide', 'error'); return; }
     const servingsVal = parseInt(servings);
     if (isNaN(servingsVal) || servingsVal <= 0) { showToast('Nombre de parts invalide (minimum 1)', 'error'); return; }
 
@@ -69,7 +75,8 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
     const dessert: Dessert = {
       id: editItem?.id || 'dessert-' + Date.now(),
       name, emoji,
-      sellPrice: sellPriceVal,
+      sellPriceParticulier: sellPriceParticulierVal,
+      sellPricePro: sellPriceProVal,
       servings: servingsVal,
       notes, components,
       createdAt: editItem?.createdAt || new Date().toISOString(),
@@ -112,9 +119,12 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
     return cost;
   }, [compMap, ingredients, bases]);
   
-  const livePrice = parseFloat(sellPrice) || 0;
-  const liveMargin = livePrice - liveCost;
-  const liveMarginRate = livePrice > 0 ? liveMargin / livePrice : 0;
+  const liveParticulierPrice = parseFloat(sellPriceParticulier) || 0;
+  const liveProPrice = parseFloat(sellPricePro) || 0;
+  const liveParticulierMargin = liveParticulierPrice - liveCost;
+  const liveParticulierMarginRate = liveParticulierPrice > 0 ? liveParticulierMargin / liveParticulierPrice : 0;
+  const liveProMargin = liveProPrice - liveCost;
+  const liveProMarginRate = liveProPrice > 0 ? liveProMargin / liveProPrice : 0;
 
   return (
     <motion.div
@@ -127,13 +137,12 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
         title="Créations"
         description={`${desserts.length} recette${desserts.length > 1 ? 's' : ''} disponibles.`}
         action={
-          <button 
+          <IconActionButton
             disabled={ingredients.length === 0 && bases.length === 0}
-            onClick={openAdd} 
-            className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform disabled:opacity-50 disabled:active:scale-100"
-          >
-            <Plus size={22} />
-          </button>
+            onClick={openAdd}
+            icon={<Plus size={22} />}
+            label="Ajouter une recette"
+          />
         }
       />
 
@@ -148,9 +157,11 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
       <div className="px-4 space-y-4">
         {desserts.map(d => {
           const cost = calculateDessertCost(d, ingredients, bases);
-          const margin = d.sellPrice - cost;
-          const marginRate = d.sellPrice > 0 ? margin / d.sellPrice : 0;
-          const coeff = cost > 0 ? d.sellPrice / cost : 0;
+          const margin = d.sellPriceParticulier - cost;
+          const marginRate = d.sellPriceParticulier > 0 ? margin / d.sellPriceParticulier : 0;
+          const coeff = cost > 0 ? d.sellPriceParticulier / cost : 0;
+          const proMargin = d.sellPricePro - cost;
+          const proMarginRate = d.sellPricePro > 0 ? proMargin / d.sellPricePro : 0;
           const costPerServing = d.servings > 0 ? cost / d.servings : 0;
           const isExpanded = expandedId === d.id;
 
@@ -171,9 +182,9 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="font-semibold text-base">{fmt(d.sellPrice)}</p>
+                    <p className="font-semibold text-base">{fmt(d.sellPriceParticulier)}</p>
                     <p className={`text-[10px] font-semibold mt-0.5 ${marginColor(marginRate)}`}>
-                      {(marginRate * 100).toFixed(0)}%
+                      Part. {(marginRate * 100).toFixed(0)}%
                     </p>
                   </div>
                   <ChevronDown size={18} className={`text-gourmand-biscuit transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -190,8 +201,12 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                           <p className="font-bold text-sm">{fmt(cost)}</p>
                         </div>
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
-                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Marge brute</p>
+                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Marge Part.</p>
                           <p className={`font-bold text-sm ${marginColor(marginRate)}`}>{fmt(margin)}</p>
+                        </div>
+                        <div className="bg-gourmand-bg rounded-xl p-3 text-center">
+                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Marge Pro</p>
+                          <p className={`font-bold text-sm ${marginColor(proMarginRate)}`}>{fmt(proMargin)}</p>
                         </div>
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
                           <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coût / Part</p>
@@ -200,6 +215,10 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
                           <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coefficient</p>
                           <p className="font-bold text-sm">×{coeff.toFixed(1)}</p>
+                        </div>
+                        <div className="bg-gourmand-bg rounded-xl p-3 text-center">
+                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Prix Pro</p>
+                          <p className="font-bold text-sm">{fmt(d.sellPricePro)}</p>
                         </div>
                       </div>
 
@@ -271,21 +290,27 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <div>
-                      <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Icône</p>
+                      <FormLabel>Icône</FormLabel>
                       <input type="text" maxLength={2} className="gourmand-input w-16 text-center text-xl text-gourmand-chocolate" value={emoji} onChange={e => setEmoji(e.target.value)} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Nom du produit</p>
+                      <FormLabel>Nom du produit</FormLabel>
                       <input placeholder="Ex: Tarte Citron" className="gourmand-input w-full text-base" value={name} onChange={e => setName(e.target.value)} />
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="flex-1">
-                      <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Prix de vente (€)</p>
-                      <input type="number" step="0.5" className="gourmand-input w-full" value={sellPrice} onChange={e => setSellPrice(e.target.value)} />
+                      <FormLabel>Prix Particulier (€)</FormLabel>
+                      <input type="number" step="0.5" className="gourmand-input w-full" value={sellPriceParticulier} onChange={e => setSellPriceParticulier(e.target.value)} />
                     </div>
+                    <div className="flex-1">
+                      <FormLabel>Prix Pro (€)</FormLabel>
+                      <input type="number" step="0.5" className="gourmand-input w-full" value={sellPricePro} onChange={e => setSellPricePro(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
                     <div className="w-24">
-                      <p className="text-[11px] font-semibold text-gourmand-biscuit mb-1.5 ml-1">Parts</p>
+                      <FormLabel>Parts</FormLabel>
                       <input type="number" className="gourmand-input w-full" value={servings} onChange={e => setServings(e.target.value)} />
                     </div>
                   </div>
@@ -293,7 +318,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
                 {bases.length > 0 && (
                   <div>
-                    <h4 className="text-[11px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2"><Beaker size={14} /> Bases maison (g)</h4>
+                    <h4 className="text-xs font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2"><Beaker size={14} /> Bases maison (g)</h4>
                     <div className="space-y-2">
                       {bases.map(b => (
                         <div key={b.id} className="flex items-center justify-between p-3 bg-gourmand-bg rounded-xl">
@@ -309,7 +334,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                 )}
 
                 <div>
-                  <h4 className="text-[11px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2"><Apple size={14} /> Matières premières</h4>
+                  <h4 className="text-xs font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2"><Apple size={14} /> Matières premières</h4>
                   <div className="space-y-2">
                     {ingredients.map(i => {
                       const iUnit = i.unit === 'u' ? 'u' : i.unit === 'L' ? 'ml' : 'g';
@@ -338,8 +363,17 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                      <p className="text-base font-bold">{fmt(liveCost)}</p>
                    </div>
                    <div className="text-right">
-                     <p className="text-[10px] text-gourmand-biscuit font-semibold uppercase">Marge estimée</p>
-                     <p className={`text-base font-bold ${marginColor(liveMarginRate)}`}>{livePrice > 0 ? `${fmt(liveMargin)} (${(liveMarginRate * 100).toFixed(0)}%)` : '-'}</p>
+                    <p className="text-[10px] text-gourmand-biscuit font-semibold uppercase">Marge Part. / Pro</p>
+                    <p className={`text-base font-bold ${marginColor(liveParticulierMarginRate)}`}>
+                      {liveParticulierPrice > 0
+                        ? `${fmt(liveParticulierMargin)} (${(liveParticulierMarginRate * 100).toFixed(0)}%)`
+                        : '-'}
+                    </p>
+                    <p className={`text-xs font-semibold ${marginColor(liveProMarginRate)}`}>
+                      {liveProPrice > 0
+                        ? `${fmt(liveProMargin)} (${(liveProMarginRate * 100).toFixed(0)}%)`
+                        : '-'}
+                    </p>
                    </div>
                 </div>
                 <button onClick={save} disabled={saving} className="gourmand-btn-primary w-full py-3.5 text-sm disabled:opacity-50">

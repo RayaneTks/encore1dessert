@@ -6,6 +6,8 @@ import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { IconActionButton } from '../components/IconActionButton';
+import { FormLabel } from '../components/FormLabel';
 import { fmt } from '../lib/calculations';
 
 
@@ -103,9 +105,7 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
         title="Matières Premières"
         description={`${ingredients.length} ingrédient${ingredients.length > 1 ? 's' : ''} référencé${ingredients.length > 1 ? 's' : ''}`}
         action={
-          <button onClick={openAdd} className="w-10 h-10 rounded-xl bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform">
-            <Plus size={22} />
-          </button>
+          <IconActionButton onClick={openAdd} icon={<Plus size={22} />} label="Ajouter une matière première" />
         }
       />
 
@@ -134,7 +134,7 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
                   <span className="text-2xl flex-shrink-0">{ing.emoji}</span>
                   <div className="min-w-0">
                     <p className="font-semibold text-base text-gourmand-chocolate leading-tight truncate mb-0.5">{ing.name}</p>
-                    <p className="text-[10px] font-medium text-gourmand-biscuit uppercase tracking-wide">{ing.category} · {unitLabel(ing.unit)}</p>
+                    <p className="text-xs font-medium text-gourmand-biscuit uppercase tracking-wide">{ing.category} · {unitLabel(ing.unit)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -156,21 +156,21 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
             <div className="p-5 space-y-5">
               <div className="flex items-center gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Icône</p>
+                  <FormLabel>Icône</FormLabel>
                   <input type="text" maxLength={2} className="gourmand-input w-16 text-center text-xl" value={emoji} onChange={e => setEmoji(e.target.value)} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Nom</p>
+                  <FormLabel>Nom</FormLabel>
                   <input placeholder="Ex: Farine T55" className="gourmand-input w-full" value={name} onChange={e => setName(e.target.value)} />
                 </div>
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Prix</p>
+                  <FormLabel>Prix</FormLabel>
                   <input placeholder="0.00" type="number" step="0.01" className="gourmand-input w-full" value={price} onChange={e => setPrice(e.target.value)} />
                 </div>
                 <div className="w-24">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Unité</p>
+                  <FormLabel>Unité</FormLabel>
                   <select className="gourmand-input w-full" value={unit} onChange={e => setUnit(e.target.value as any)}>
                     <option value="kg">kg</option>
                     <option value="L">L</option>
@@ -179,13 +179,13 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Catégorie</p>
+                <FormLabel>Catégorie</FormLabel>
                 <select className="gourmand-input w-full" value={category} onChange={e => setCategory(e.target.value)}>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1.5 ml-1">Étiquette d'achat (Mémo)</p>
+                <FormLabel>Étiquette d'achat (Mémo)</FormLabel>
                 <input placeholder="Ex: 4,29€ les 20" className="gourmand-input w-full" value={purchaseLabel} onChange={e => setPurchaseLabel(e.target.value)} />
               </div>
               <textarea placeholder="Notes..." className="gourmand-input w-full resize-none h-20 text-sm" value={notes} onChange={e => setNotes(e.target.value)} />
