@@ -260,6 +260,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const [detailCommand, setDetailCommand] = useState<Commande | null>(null);
   /** Panneau « Options & détail » dans le modal commande (replié par défaut). */
   const [detailMoreOpen, setDetailMoreOpen] = useState(false);
+  /** Ligne desserts nouvellement ajoutée (flash visuel). */
+  const [detailHighlightLineIdx, setDetailHighlightLineIdx] = useState<number | null>(null);
   const [editing, setEditing] = useState<Commande>(BLANK);
   const [deleteTarget, setDeleteTarget] = useState<Commande | null>(null);
   const [saving, setSaving] = useState(false);
@@ -400,18 +402,27 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
   const MAX_DESSERT_LINES = 24;
 
-  const addItem = () => {
+  const addItem = (opts?: { prepend?: boolean }) => {
     setEditing(prev => {
       if (prev.items.length >= MAX_DESSERT_LINES) {
         void Promise.resolve().then(() => showToast(`Maximum ${MAX_DESSERT_LINES} lignes de desserts.`, 'error'));
         return prev;
       }
-      return { ...prev, items: [...prev.items, { ...BLANK_ITEM }] };
+      const line = { ...BLANK_ITEM };
+      if (opts?.prepend) {
+        return { ...prev, items: [line, ...prev.items] };
+      }
+      return { ...prev, items: [...prev.items, line] };
     });
+    if (opts?.prepend) {
+      setDetailHighlightLineIdx(0);
+      window.setTimeout(() => setDetailHighlightLineIdx(null), 1000);
+    }
   };
 
   const removeItem = (idx: number) => {
     setEditing(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
+    showToast('Ligne supprimée', 'info');
   };
 
   const toggleNotify = (val: NotifyBefore) => {
@@ -516,8 +527,9 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         items: mergedItems,
       };
       await persistCommande(saved, 'Enregistré ✓');
-      setDetailCommand({ ...saved, items: mergedItems.map(i => ({ ...i })) });
-      setEditing({ ...saved, items: mergedItems.map(i => ({ ...i })) });
+      setDetailCommand(null);
+      setDetailMoreOpen(false);
+      setDetailHighlightLineIdx(null);
     } finally {
       setSaving(false);
     }
@@ -534,11 +546,15 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         return;
       }
       await persistCommande({ ...live, status: next }, `${STATUS_LABEL[next]} ✓`);
-      setDetailCommand(prev => (prev && prev.id === live.id ? { ...prev, status: 'ready' } : prev));
-      setEditing(prev => (prev.id === live.id ? { ...prev, status: 'ready' } : prev));
+      setDetailCommand(null);
+      setDetailMoreOpen(false);
+      setDetailHighlightLineIdx(null);
       return;
     }
     if (next === 'delivered') {
+      setDetailCommand(null);
+      setDetailMoreOpen(false);
+      setDetailHighlightLineIdx(null);
       setDeliverTarget(live);
     }
   };
@@ -919,7 +935,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Desserts</span>
                   <button
                     type="button"
-                    onClick={addItem}
+                    onClick={() => addItem()}
                     className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gourmand-chocolate border border-gourmand-border bg-white active:bg-gourmand-bg cursor-pointer min-h-11"
                   >
                     <Plus size={16} strokeWidth={2.25} /> Ligne
@@ -1159,9 +1175,6 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               <ul className="mx-auto max-w-sm space-y-2 rounded-2xl border border-gourmand-border/80 bg-gourmand-bg/30 p-3">
                 {mergeCommandeItems(editing.items).map((row, idx) => (
                   <li key={`${row.dessertId ?? row.dessertName}-${idx}`} className="flex items-center gap-3 text-left">
-                    <span className="text-lg leading-none" aria-hidden>
-                      {row.dessertEmoji || '🍰'}
-                    </span>
                     <span className="min-w-0 flex-1 text-sm font-semibold text-gourmand-chocolate">{row.dessertName}</span>
                     <span className="shrink-0 text-sm font-bold tabular-nums text-gourmand-cocoa">×{row.quantity}</span>
                   </li>
@@ -1287,33 +1300,42 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   </div>
 
                   <div className="min-w-0">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Lignes desserts</span>
-                      {editing.status === 'pending' && (
-                        <button type="button" onClick={addItem} className="flex items-center gap-0.5 text-xs font-semibold text-gourmand-chocolate">
-                          <Plus size={14} /> Ajouter
-                        </button>
-                      )}
-                    </div>
+                    <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">
+                      Lignes desserts
+                    </span>
+                    {editing.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => addItem({ prepend: true })}
+                        className="mb-3 flex w-full min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gourmand-chocolate/35 bg-gourmand-chocolate/[0.04] text-sm font-semibold text-gourmand-chocolate transition-colors active:bg-gourmand-chocolate/10"
+                      >
+                        <Plus size={18} strokeWidth={2.25} aria-hidden />
+                        Ajouter un dessert
+                      </button>
+                    )}
                     <div className="space-y-2">
                       {editing.items.map((item, idx) => (
-                        <div
+                        <motion.div
                           key={idx}
-                          className="flex items-center gap-2 rounded-xl border border-gourmand-border bg-gourmand-bg/25 px-2 py-1.5"
+                          initial={detailHighlightLineIdx === idx ? { opacity: 0.4, y: -4 } : false}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                          className={`flex items-center gap-2 rounded-xl border bg-white px-2 py-1.5 transition-shadow duration-300 ${
+                            detailHighlightLineIdx === idx
+                              ? 'border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.35)]'
+                              : 'border-gourmand-border'
+                          }`}
                         >
-                          <span className="flex w-9 shrink-0 justify-center text-lg leading-none" aria-hidden>
-                            {item.dessertEmoji || '🍰'}
-                          </span>
                           <select
-                            className="gourmand-input min-h-11 min-w-0 flex-1 py-2 text-sm"
+                            className="gourmand-input min-h-11 min-w-0 flex-1 py-2 text-base"
                             value={item.dessertId || ''}
                             onChange={e => handleDessertChange(idx, e.target.value)}
                             disabled={editing.status !== 'pending'}
                           >
-                            <option value="">— Dessert —</option>
+                            <option value="">— Choisir —</option>
                             {desserts.map(d => (
                               <option key={d.id} value={d.id}>
-                                {d.emoji} {d.name}
+                                {d.name}
                               </option>
                             ))}
                           </select>
@@ -1322,7 +1344,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                             min={1}
                             max={999}
                             disabled={editing.status !== 'pending'}
-                            className="gourmand-input h-11 w-14 shrink-0 px-1 text-center text-sm tabular-nums disabled:opacity-50"
+                            className="gourmand-input h-11 w-[3.75rem] shrink-0 px-1 text-center text-base tabular-nums disabled:opacity-50"
                             value={item.quantity}
                             onChange={e =>
                               setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })
@@ -1332,13 +1354,13 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                             <button
                               type="button"
                               onClick={() => removeItem(idx)}
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-red-400 hover:bg-red-50/80"
+                              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50"
                               aria-label="Supprimer la ligne"
                             >
-                              <Trash2 size={17} strokeWidth={2} />
+                              <Trash2 size={18} strokeWidth={2} />
                             </button>
                           )}
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </div>
