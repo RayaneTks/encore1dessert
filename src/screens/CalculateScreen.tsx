@@ -29,6 +29,7 @@ interface Props {
   onCheckoutCart: (
     lines: { dessertId: string; quantity: number; catalogueUnitOverride?: number }[],
     customerType: 'particulier' | 'pro',
+    options?: { saleLabel?: string },
   ) => void | Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
@@ -66,6 +67,7 @@ export const CalculateScreen: React.FC<Props> = ({
   const [checkoutDone, setCheckoutDone] = useState(false);
   const [editingPriceFor, setEditingPriceFor] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState('');
+  const [saleLabel, setSaleLabel] = useState('');
 
   const todayISO = new Date().toISOString().split('T')[0];
   const todayCommandes = commandes.filter(c => c.deliveryDate === todayISO && c.status !== 'delivered');
@@ -190,6 +192,7 @@ export const CalculateScreen: React.FC<Props> = ({
 
   const handleCheckout = useCallback(async () => {
     if (cart.length === 0) return;
+    const label = saleLabel.trim();
     await onCheckoutCart(
       cart.map(c => {
         const o = c.priceOverride ? parseFloat(c.priceOverride) : undefined;
@@ -201,13 +204,15 @@ export const CalculateScreen: React.FC<Props> = ({
         };
       }),
       customerType,
+      label ? { saleLabel: label } : undefined,
     );
     setCart([]);
     setCheckoutDone(true);
     setSearch('');
+    setSaleLabel('');
     showToast('Vente enregistrée', 'success');
     setTimeout(() => setCheckoutDone(false), 1600);
-  }, [cart, customerType, onCheckoutCart, showToast]);
+  }, [cart, customerType, onCheckoutCart, showToast, saleLabel]);
 
   if (desserts.length === 0) {
     return (
@@ -270,22 +275,44 @@ export const CalculateScreen: React.FC<Props> = ({
           />
         </div>
 
-        <div className="relative mb-4">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-[1.1rem] w-[1.1rem] -translate-y-1/2 text-gourmand-biscuit"
-            aria-hidden
-          />
+        <div className="mb-3">
+          <div
+            className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl border border-gourmand-border bg-white px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-gourmand-chocolate focus-within:border-gourmand-chocolate"
+          >
+            <Search
+              className="h-5 w-5 shrink-0 text-gourmand-biscuit"
+              strokeWidth={2}
+              aria-hidden
+            />
+            <input
+              id={searchId}
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un produit…"
+              className="min-h-0 min-w-0 flex-1 border-0 bg-transparent py-0.5 text-base font-medium text-gourmand-chocolate placeholder:text-gourmand-biscuit/60 outline-none"
+              autoComplete="off"
+              enterKeyHint="search"
+              inputMode="search"
+            />
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="sale-label-caisse" className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">
+            Libellé (compta, optionnel)
+          </label>
           <input
-            id={searchId}
-            type="search"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher un produit…"
-            className="gourmand-input w-full pl-9 pr-3 text-base"
+            id="sale-label-caisse"
+            type="text"
+            value={saleLabel}
+            onChange={e => setSaleLabel(e.target.value.slice(0, 120))}
+            maxLength={120}
+            placeholder="ex. Fête M., Boulangerie X, n° de note…"
+            className="gourmand-input w-full text-base"
             autoComplete="off"
-            enterKeyHint="search"
-            inputMode="search"
           />
+          <p className="mt-1 text-[10px] text-gourmand-biscuit/80">S’affiche en Dashboard sur ce ticket (toutes les lignes).</p>
         </div>
 
         {/* Panier : zone principale */}

@@ -264,6 +264,7 @@ export async function fetchHistory(): Promise<HistoryEntry[]> {
       typeof (h as { bundle_offer_label_at_sale?: string }).bundle_offer_label_at_sale === 'string'
         ? (h as { bundle_offer_label_at_sale: string }).bundle_offer_label_at_sale
         : '',
+    saleLabel: typeof (h as { sale_label?: string | null }).sale_label === 'string' ? (h as { sale_label: string }).sale_label : '',
   }));
 }
 
@@ -286,6 +287,7 @@ export async function insertHistoryEntry(entry: {
   catalogueUnitAtSale: number;
   revenueCaption: string;
   bundleOfferLabelAtSale: string;
+  saleLabel: string;
 }): Promise<HistoryEntry> {
   const fullRow = {
     dessert_id: entry.dessertId.startsWith('dessert-') ? null : entry.dessertId,
@@ -306,12 +308,19 @@ export async function insertHistoryEntry(entry: {
     catalogue_unit_at_sale: entry.catalogueUnitAtSale,
     revenue_caption: entry.revenueCaption || '',
     bundle_offer_label_at_sale: entry.bundleOfferLabelAtSale || '',
+    sale_label: entry.saleLabel || '',
   };
 
   let res = await supabase.from('history_entries').insert(fullRow).select().single();
 
   if (res.error && isMissingHistoryOptionalColumnError(res.error)) {
-    const { catalogue_unit_at_sale: _a, revenue_caption: _r, bundle_offer_label_at_sale: _b, ...rest } = fullRow;
+    const {
+      catalogue_unit_at_sale: _a,
+      revenue_caption: _r,
+      bundle_offer_label_at_sale: _b,
+      sale_label: _sl,
+      ...rest
+    } = fullRow;
     res = await supabase.from('history_entries').insert(rest).select().single();
   }
 
@@ -346,6 +355,8 @@ export async function insertHistoryEntry(entry: {
       typeof (data as { bundle_offer_label_at_sale?: string }).bundle_offer_label_at_sale === 'string'
         ? (data as { bundle_offer_label_at_sale: string }).bundle_offer_label_at_sale
         : entry.bundleOfferLabelAtSale || '',
+    saleLabel:
+      typeof (data as { sale_label?: string | null }).sale_label === 'string' ? data.sale_label : entry.saleLabel || '',
   };
 }
 

@@ -197,6 +197,8 @@ export default function App() {
       revenueCaption?: string;
       /** Libellé d’offre (commande / caisse) ; prioritaire s’il est fourni. */
       bundleOfferLabelAtSale?: string;
+      /** Libellé compta (caisse) — pour tout le ticket. */
+      saleLabel?: string;
     },
   ) => {
     const unitCost = calculateDessertCost(dessert, ingredients, bases);
@@ -260,6 +262,7 @@ export default function App() {
         catalogueUnitAtSale: catalogueUnit,
         revenueCaption,
         bundleOfferLabelAtSale,
+        saleLabel: (options?.saleLabel ?? '').trim(),
       });
       setHistory(prev => [saved, ...prev]);
     } catch (err: any) {
@@ -272,9 +275,11 @@ export default function App() {
     async (
       lines: { dessertId: string; quantity: number; catalogueUnitOverride?: number }[],
       customerType: 'particulier' | 'pro',
+      opts?: { saleLabel?: string },
     ) => {
       if (lines.length === 0) return;
       const orderGroupId = crypto.randomUUID();
+      const label = (opts?.saleLabel ?? '').trim();
       const { lines: allocRows, skippedLines } = buildCommandeSaleAllocations(
         lines,
         id => desserts.find(d => d.id === id),
@@ -289,6 +294,7 @@ export default function App() {
           revenueCaption: row.revenueCaption,
           bundleOfferLabelAtSale: row.bundleOfferLabelAtSale,
           overridePrice: row.catalogueUnitAtSale,
+          saleLabel: label,
         });
       }
       if (skippedLines > 0) showToast(`${skippedLines} article(s) ignoré(s) — recette manquante`, 'info');

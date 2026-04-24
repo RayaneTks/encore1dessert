@@ -94,6 +94,8 @@ export interface HistoryEntry {
   linesSnapshot: SnapshotLine[];  // Détail figé complet
   /** Même id pour toutes les lignes d'un même encaissement (caisse ou livraison). */
   orderGroupId: string;
+  /** Libellé libre saisi en caisse (identique sur chaque ligne du ticket), ex. fête, réf. */
+  saleLabel: string;
   /** Si la vente vient d’une commande client (livrée). */
   sourceCommandeId: string | null;
 }

@@ -33,6 +33,7 @@ function groupHistoryRows(history: HistoryEntry[]) {
         customerType: first.customerType,
         totalRevenue,
         totalProfit,
+        saleLabel: first.saleLabel?.trim() ?? '',
       };
     })
     .sort((a, b) => b.firstDate.localeCompare(a.firstDate));
@@ -296,6 +297,11 @@ export const HistoryScreen: React.FC<Props> = ({
                               ? cmd.clientName
                               : `${one.quantitySold}× ${one.dessertName}`}
                         </p>
+                        {!isFromCommande && g.saleLabel ? (
+                          <p className="text-[11px] text-gourmand-cocoa/75 mt-0.5 line-clamp-1 italic">
+                            {g.saleLabel}
+                          </p>
+                        ) : null}
                         {!isMulti && cmd && (
                           <p className="text-[11px] text-gourmand-biscuit/90 truncate mt-0.5">
                             {one.quantitySold}× {one.dessertName}
@@ -367,6 +373,11 @@ export const HistoryScreen: React.FC<Props> = ({
                       ? commandes.find(c => c.id === groupOpen.sourceCommandeId)?.clientName ?? 'Client'
                       : 'Vente directe (caisse)'}
                   </h3>
+                  {groupOpen.saleLabel && !groupOpen.sourceCommandeId ? (
+                    <p className="text-sm text-gourmand-cocoa/80 mt-1.5 break-words leading-snug" title={groupOpen.saleLabel}>
+                      {groupOpen.saleLabel}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-gourmand-biscuit mt-1">
                     {new Date(groupOpen.firstDate).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })} ·{' '}
                     {groupOpen.entries.length} ligne{groupOpen.entries.length > 1 ? 's' : ''}
@@ -458,6 +469,11 @@ export const HistoryScreen: React.FC<Props> = ({
                   <h3 className="text-lg font-bold tracking-tight mt-0.5">
                     {selectedEntry.dessertEmoji} {selectedEntry.quantitySold}× {selectedEntry.dessertName}
                   </h3>
+                  {selectedEntry.saleLabel && !selectedEntry.sourceCommandeId ? (
+                    <p className="text-sm text-gourmand-cocoa/80 mt-1.5 max-w-[16rem] break-words leading-snug" title={selectedEntry.saleLabel}>
+                      {selectedEntry.saleLabel}
+                    </p>
+                  ) : null}
                   <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     selectedEntry.customerType === 'pro'
                       ? 'bg-gourmand-chocolate text-white'
