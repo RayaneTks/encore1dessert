@@ -20,7 +20,7 @@ export interface FilterChipOption<T extends string> {
 }
 
 const chipBase =
-  'min-h-11 w-full rounded-xl border px-2 text-center text-xs font-semibold transition-all duration-200 active:scale-[0.98]';
+  'min-h-11 w-full rounded-xl border px-2 text-center text-xs font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/22 focus-visible:ring-offset-1';
 
 const chipActive = 'border-gourmand-chocolate bg-gourmand-chocolate text-white shadow-sm';
 const chipIdle = 'border-gourmand-border bg-white text-gourmand-biscuit';
@@ -33,7 +33,7 @@ function gridColsClass(count: number): string {
 }
 
 const pillBase =
-  'shrink-0 rounded-full border px-3.5 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-[0.98]';
+  'shrink-0 rounded-full border px-3.5 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/22 focus-visible:ring-offset-1';
 const pillActive = 'border-gourmand-chocolate bg-gourmand-chocolate text-white';
 const pillIdle = 'border-gourmand-border bg-white text-gourmand-biscuit';
 
@@ -112,7 +112,7 @@ export function FilterChipRow<T extends string>({
 }
 
 const filterGroupLabelClass =
-  'px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit';
+  'px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-cocoa/70';
 
 /**
  * « Trier par » + liste compacte à droite (même hauteur de ligne que les groupes Période / Statut).
@@ -129,7 +129,7 @@ export function FilterSortByCustomer({
       <span className={`${filterGroupLabelClass} shrink-0`}>Trier par</span>
       <div className="relative ml-auto min-w-0 shrink">
         <select
-          className="h-9 min-h-9 w-full min-w-[7.25rem] max-w-[11rem] cursor-pointer appearance-none rounded-lg border border-gourmand-border bg-white px-2.5 pr-8 text-sm font-semibold text-gourmand-chocolate shadow-sm outline-none transition-colors focus:border-gourmand-chocolate focus:ring-1 focus:ring-gourmand-chocolate"
+          className="h-9 min-h-9 w-full min-w-[7.25rem] max-w-[11rem] cursor-pointer appearance-none rounded-lg border border-gourmand-border bg-white px-2.5 pr-8 text-sm font-semibold text-gourmand-chocolate shadow-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-gourmand-chocolate focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/18"
           value={value}
           onChange={e => onChange(e.target.value as 'all' | 'particulier' | 'pro')}
           aria-label="Trier par type de client"

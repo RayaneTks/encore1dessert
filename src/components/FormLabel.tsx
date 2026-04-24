@@ -6,7 +6,7 @@ interface FormLabelProps {
 
 export const FormLabel: React.FC<FormLabelProps> = ({ children }) => {
   return (
-    <p className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit mb-2 block">
+    <p className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gourmand-cocoa/75">
       {children}
     </p>
   );

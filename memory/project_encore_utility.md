@@ -20,3 +20,8 @@ type: project
 
 **Workflow Requirement:**
 When undertaking major UI/UX overhauls, always leverage the specialized skills available in the `.skills` directory (e.g., `frontend-design`, `ui-ux-pro-max`).
+
+**Métier — Ordres vs Compta (règles produit)**
+* **Onglet Ordres** : liste opérationnelle. Une commande **livrée** disparaît de cette liste dès le **lendemain (J+1)** du jour enregistré comme date de livraison réelle (`deliveryDate` au passage en *Livrée*). Les données restent en base ; l’historique de vente reste dans la Compta.
+* **Dates** : `src/lib/dateLocal.ts` — `toCalendarISODate` normalise toute date (évite les bugs de comparaison texte ex. `2026-4-24` vs `2026-04-25`) ; le filtre d’exclusion des livrées utilise cette forme. Rafraîchissement du « jour calendaire » côté écran Commandes (intervalle + retour d’onglet).
+* **Compta immuable** : les enregistrements `history_entries` sont des instantanés (prix, légendes, offre au moment de la vente). **Supprimer une commande** ne supprime pas les tickets compta. Pas de recalcul rétroactif si le catalogue ou les offres changent. Doc détaillée : `CLAUDE.md` (sections History / Commandes / contraintes).

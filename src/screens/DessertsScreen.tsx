@@ -362,7 +362,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                             <span className="truncate">{b.name}</span>
                           </span>
                           <input type="number" placeholder="0" value={compMap[b.id]?.qty || ''}
-                            className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate"
+                            className="w-20 rounded-lg border border-gourmand-border bg-white px-3 py-1.5 text-right text-sm font-medium text-gourmand-chocolate transition-[border-color,box-shadow] focus:border-gourmand-chocolate focus:outline-none focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/15"
                             onChange={e => setCompMap(prev => ({ ...prev, [b.id]: { type: 'base', qty: parseFloat(e.target.value) || 0 } }))}
                           />
                         </div>
@@ -386,7 +386,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                           </span>
                           <div className="flex items-center gap-2">
                             <input type="number" placeholder="0" value={compMap[i.id]?.qty || ''}
-                              className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate"
+                              className="w-20 rounded-lg border border-gourmand-border bg-white px-3 py-1.5 text-right text-sm font-medium text-gourmand-chocolate transition-[border-color,box-shadow] focus:border-gourmand-chocolate focus:outline-none focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/15"
                               onChange={e => setCompMap(prev => ({ ...prev, [i.id]: { type: 'ingredient', qty: parseFloat(e.target.value) || 0 } }))}
                             />
                             <span className="text-xs font-medium text-gourmand-biscuit w-4">{iUnit}</span>

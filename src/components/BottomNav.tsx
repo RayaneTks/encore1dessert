@@ -29,7 +29,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             aria-label={`Ouvrir ${tab.label}`}
-            className={`relative flex flex-1 min-h-[44px] flex-col items-center justify-center gap-1 transition-colors duration-200 ${
+            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-0.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gourmand-chocolate/20 ${
               activeTab === tab.id ? 'text-gourmand-chocolate' : 'text-gourmand-biscuit'
             }`}
           >

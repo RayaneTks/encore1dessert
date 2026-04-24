@@ -39,6 +39,7 @@ import {
   totalDessertsOrdered,
   totalDessertsRemaining,
 } from '../lib/commandeProduction';
+import { commandeHiddenFromOrdresList, localDateISO } from '../lib/dateLocal';
 
 interface Props {
   commandes: Commande[];
@@ -91,8 +92,11 @@ function urgencyClass(deliveryDate: string, status: CommandeStatus): string {
   if (status === 'delivered') return 'border-stone-200 bg-stone-50/80 opacity-70';
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diff = Math.floor((new Date(deliveryDate).getTime() - today.getTime()) / 86400000);
-  if (diff < 0) return 'border-red-200 bg-red-50/60';
+  const diff = Math.floor((new Date(deliveryDate + 'T12:00:00').getTime() - today.getTime()) / 86400000);
+  if (diff < 0 && (status === 'pending' || status === 'ready')) {
+    return 'border-red-200 bg-red-50/50 ring-1 ring-red-100/80';
+  }
+  if (diff < 0) return 'border-amber-200/80 bg-amber-50/20';
   if (diff === 0) return 'border-orange-200 bg-orange-50/40';
   if (diff === 1) return 'border-amber-200 bg-amber-50/30';
   return 'border-gourmand-border bg-white';
@@ -102,8 +106,12 @@ function urgencyBadge(deliveryDate: string, status: CommandeStatus): { label: st
   if (status === 'delivered') return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diff = Math.floor((new Date(deliveryDate).getTime() - today.getTime()) / 86400000);
-  if (diff < 0) return { label: 'En retard', cls: 'bg-red-100 text-red-600' };
+  const diff = Math.floor((new Date(deliveryDate + 'T12:00:00').getTime() - today.getTime()) / 86400000);
+  /* En retard : uniquement attente / prête, pas autre (ex. filtre livrée). */
+  if (diff < 0 && (status === 'pending' || status === 'ready')) {
+    return { label: 'En retard', cls: 'bg-red-100 text-red-800 border border-red-200' };
+  }
+  if (diff < 0) return null;
   if (diff === 0) return { label: "Aujourd'hui", cls: 'bg-orange-100 text-orange-600' };
   if (diff === 1) return { label: 'Demain', cls: 'bg-amber-100 text-amber-600' };
   return null;
@@ -133,16 +141,14 @@ function nextProducedTap(i: number, produced: number, quantity: number): number 
   return Math.min(q, i + 1);
 }
 
-const todayISO = new Date().toISOString().split('T')[0];
-
 const BLANK_ITEM: CommandeItem = { dessertId: null, dessertName: '', dessertEmoji: '🍰', quantity: 1, producedQty: 0 };
 
 const BLANK: Commande = {
   id: 'cmd-new',
   clientName: '',
   items: [{ ...BLANK_ITEM }],
-  orderDate: todayISO,
-  deliveryDate: todayISO,
+  orderDate: localDateISO(),
+  deliveryDate: localDateISO(),
   notes: '',
   customerType: 'particulier',
   status: 'pending',
@@ -278,9 +284,39 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
   const [converting, setConverting] = useState(false);
   /** Clés de groupe dessert dépliés dans l’onglet Cuisine (par défaut : aucun = tout fermé). */
   const [kitchenExpandedKeys, setKitchenExpandedKeys] = useState<Set<string>>(() => new Set());
+  const [minuteTick, setMinuteTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setMinuteTick(n => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  /** Jour calendaire local — mis à jour souvent + au retour d’onglet (évite liste Ordres figée au mauvais jour). */
+  const [calendarDay, setCalendarDay] = useState(() => localDateISO());
+  useEffect(() => {
+    const sync = () => {
+      const d = localDateISO();
+      setCalendarDay(prev => (prev !== d ? d : prev));
+    };
+    const id = window.setInterval(sync, 5_000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') sync();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', sync);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', sync);
+    };
+  }, []);
+
+  /** Sauf commandes livrées dont le jour de livraison (réel) est passé : listées en compta, plus sur Ordres. */
+  const commandesPourOrdres = useMemo(() => {
+    return commandes.filter(c => !commandeHiddenFromOrdresList(c, calendarDay));
+  }, [commandes, calendarDay]);
 
   const filtered = useMemo(() => {
-    let list = filter === 'all' ? commandes : commandes.filter(c => c.status === filter);
+    let list = filter === 'all' ? commandesPourOrdres : commandesPourOrdres.filter(c => c.status === filter);
     if (customerFilterOrdres !== 'all') {
       list = list.filter(c => c.customerType === customerFilterOrdres);
     }
@@ -289,9 +325,12 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
       if (b.status === 'delivered' && a.status !== 'delivered') return -1;
       return a.deliveryDate.localeCompare(b.deliveryDate);
     });
-  }, [commandes, filter, customerFilterOrdres]);
+  }, [commandesPourOrdres, filter, customerFilterOrdres]);
 
-  const pendingCount = useMemo(() => commandes.filter(c => c.status === 'pending').length, [commandes]);
+  const pendingCount = useMemo(
+    () => commandesPourOrdres.filter(c => c.status === 'pending').length,
+    [commandesPourOrdres],
+  );
   const remainingKitchen = useMemo(() => totalDessertsRemaining(commandes), [commandes]);
   const orderedKitchen = useMemo(() => totalDessertsOrdered(commandes), [commandes]);
   const kitchenPct = orderedKitchen > 0 ? Math.round(((orderedKitchen - remainingKitchen) / orderedKitchen) * 100) : 0;
@@ -327,7 +366,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
   };
 
   const openNewCommandForm = () => {
-    setEditing({ ...BLANK, id: 'cmd-new', items: [{ ...BLANK_ITEM }], orderDate: todayISO, deliveryDate: todayISO });
+    const d = localDateISO();
+    setEditing({ ...BLANK, id: 'cmd-new', items: [{ ...BLANK_ITEM }], orderDate: d, deliveryDate: d });
     setFormOpen(true);
   };
 
@@ -537,11 +577,13 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
     }
     setSaving(true);
     try {
+      const effectiveDeliveryDate =
+        nextStatus === 'delivered' ? localDateISO() : editing.deliveryDate;
       const saved = {
         ...detailCommand,
         clientName: editing.clientName.trim(),
         orderDate: editing.orderDate,
-        deliveryDate: editing.deliveryDate,
+        deliveryDate: effectiveDeliveryDate,
         notes: editing.notes,
         customerType: editing.customerType,
         notifyBefore: editing.notifyBefore,
@@ -604,7 +646,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
         }
         if (skippedLines > 0) showToast(`${skippedLines} article(s) ignoré(s) — recette manquante`, 'info');
       }
-      await persistCommande({ ...deliverTarget, status: 'delivered' }, 'Commande livrée ✓');
+      const livreeLe = localDateISO();
+      await persistCommande({ ...deliverTarget, status: 'delivered', deliveryDate: livreeLe }, 'Commande livrée ✓');
       setDeliverTarget(null);
       setDetailCommand(null);
     } finally {
@@ -635,8 +678,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
           title="Ordres"
           description={
             orderedKitchen > 0
-              ? `${pendingCount} attente · ${commandes.length} total · ${remainingKitchen} restant cuisine`
-              : `${pendingCount} attente · ${commandes.length} total`
+              ? `${pendingCount} attente · ${commandesPourOrdres.length} sur Ordres · ${remainingKitchen} restant cuisine`
+              : `${pendingCount} attente · ${commandesPourOrdres.length} sur Ordres`
           }
           action={
             <IconActionButton
@@ -1389,7 +1432,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
         {deleteTarget && (
           <ConfirmDialog
             title="Supprimer cette commande ?"
-            message={`La commande de ${deleteTarget.clientName} sera définitivement supprimée.`}
+            message={`La fiche commande de ${deleteTarget.clientName} sera supprimée de Ordres. Les ventes déjà enregistrées en compta (tickets) ne sont pas supprimées ni modifiées.`}
             onConfirm={confirmDelete}
             onCancel={() => setDeleteTarget(null)}
           />

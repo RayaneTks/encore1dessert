@@ -25,6 +25,11 @@
     touch-action: manipulation;
   }
 
+  ::selection {
+    background-color: rgba(28, 25, 23, 0.1);
+    color: var(--color-gourmand-chocolate);
+  }
+
   body {
     @apply flex flex-col items-center justify-center;
   }
@@ -37,6 +42,20 @@
   button:disabled {
     cursor: not-allowed;
   }
+
+  /* Liens & boutons : contour ; champs = anneau via .gourmand-input / classes locales */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--color-gourmand-chocolate);
+    outline-offset: 2px;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -46,15 +65,6 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--color-gourmand-chocolate);
-  outline-offset: 2px;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -67,7 +77,7 @@ a:focus-visible {
 
 /* Quiet Luxury Cards - Plus épurées, moins arrondies, pas d'ombres exagérées */
 .gourmand-card {
-  @apply bg-white rounded-2xl border border-gourmand-border transition-colors;
+  @apply bg-white rounded-2xl border border-gourmand-border shadow-sm transition-colors;
 }
 
 .gourmand-card-dark {
@@ -82,15 +92,18 @@ a:focus-visible {
 /* Boutons premium - Simple, direct, à haut contraste */
 .gourmand-btn-primary {
   @apply min-h-[44px] px-4 bg-gourmand-chocolate text-white font-semibold rounded-xl flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:ring-offset-2 focus-visible:ring-offset-gourmand-chocolate;
 }
 
 /* Bouton primaire compact (listes, cartes — style plus proche iOS) */
 .gourmand-btn-primary-compact {
   @apply min-h-[36px] px-3 py-2 text-xs font-semibold rounded-lg bg-gourmand-chocolate text-white flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-gourmand-chocolate;
 }
 
 .gourmand-btn-strawberry {
   @apply min-h-[44px] px-4 bg-gourmand-chocolate text-white font-semibold rounded-xl flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:ring-offset-2 focus-visible:ring-offset-gourmand-chocolate;
 }
 
 .gourmand-btn-secondary {
@@ -103,7 +116,9 @@ a:focus-visible {
 
 /* Formulaires épurés */
 .gourmand-input {
-  @apply min-h-[44px] bg-white border border-gourmand-border rounded-xl px-4 py-3 text-gourmand-chocolate font-medium focus:outline-none focus:ring-1 focus:ring-gourmand-chocolate focus:border-gourmand-chocolate transition-colors shadow-sm;
+  @apply min-h-[44px] bg-white border border-gourmand-border rounded-xl px-4 py-3 text-gourmand-chocolate font-medium shadow-sm;
+  @apply transition-[color,box-shadow,border-color] duration-200;
+  @apply focus:outline-none focus-visible:border-gourmand-chocolate focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/18 focus-visible:ring-offset-0;
 }
 
 /* Champs date : évite le débordement en grille étroite (430px, 2 colonnes) */

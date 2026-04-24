@@ -8,6 +8,8 @@ Une application ultra-premium de gestion de coûts de revient et de pilotage fin
 - **Formulation Dynamique** : Modifiez un grammage dans une fiche technique et consultez son impact instantané sur la marge grâce au calculateur de coût direct ancré en temps réel.
 - **Gestion Pâtissière Modulaire** : Référencez vos matières premières (Beurre, Farine...) et créez des bases semi-finies (Pâte sucrée, praliné) pour les assembler dans vos fiches produits finaux.
 - **Données Sécurisées (Cloud)** : Synchronisation continue et automatique grâce à une architecture de données relationnelle via **Supabase**. Finie la perte de données liées au navigateur !
+- **Commandes (Ordres)** : prise de commande, suivi **En attente / Prête / Livrée**, rappels locaux, passage en vente comptable à la livraison. La liste **Ordres** masque les commandes **livrées** dès le **lendemain (J+1)** de leur date de livraison enregistrée (elles restent en base et côté **Compta** si encaissées).
+- **Compta (historique des ventes)** : enregistrements **figés** au moment de la vente (prix, lots, légendes) ; une suppression de fiche en Ordres **ne supprime pas** l’historique comptable. Voir `CLAUDE.md` pour le détail technique.
 - **Design "Quiet Luxury"** : Interface épurée, ultra-contrastée, axée sur les typographies modernes afin de favoriser la lecture des chiffres et la rapidité d'exécution.
 
 ## 🛠️ Stack Technique

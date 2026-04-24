@@ -25,6 +25,10 @@ src/
 ├── components/    # PageHeader, Modal, BottomNav, SectionCard, SettingsRow, Toast, ConfirmDialog, InstallPrompt
 ├── data/          # initialData.ts (seed data)
 ├── lib/
+│   ├── bundleOffer.ts    # règles d’offres (lots), libellés, résolution par dessert
+│   ├── dateLocal.ts      # `localDateISO`, `toCalendarISODate`, filtre Ordres (livrées J+1)
+│   ├── deliveryBundle.ts # allocation CA commande → ventes (prix figés)
+│   ├── commandeProduction.ts
 │   ├── calculations.ts   # cost engine, snapshots, stats
 │   ├── db.ts             # Supabase CRUD (fetchX, upsertX, deleteX)
 │   ├── notifications.ts  # local notification schedule (localStorage)
@@ -43,8 +47,9 @@ public/
 * **Matières Premières** (Ingredients): Raw purchased materials with price/kg
 * **Bases** (Preparations): House-made components from ingredients (e.g., caramel, dough)
 * **Desserts**: Finished products composed of bases + direct ingredients, with sell price
-* **History**: Immutable sale records with `SnapshotLine[]` — prices frozen at time of sale
-* **Commandes**: Advance client orders. Each commande has multiple `CommandeItem[]` (dessert + quantity), delivery date, status (pending/ready/delivered), and local notification preferences (`notifyBefore: NotifyBefore[]`).
+* **History (Compta)**: Immutable sale records in `history_entries` with `SnapshotLine[]` and frozen unit/total revenue at sale time (`catalogueUnitAtSale`, `revenue_caption`, `bundle_offer_label_at_sale`, `sale_label`, etc.). **Do not** recalculate past rows when catalog or bundle rules change; new sales use current rules. Deleting a **commande** does **not** delete history rows (see `deleteCommande` in `db.ts` — compta stays intact; only explicit Compta UI deletion removes entries).
+* **Commandes (Ordres)**: Advance orders with `CommandeItem[]`, `orderDate`, `deliveryDate`, status `pending` | `ready` | `delivered`, `notifyBefore`. On **Livrée**, set `deliveryDate` to the **actual** calendar day (`localDateISO()`). **List Ordres** hides `delivered` when `toCalendarISODate(deliveryDate) < today` (J+1 after delivery day: free space; data still in Supabase and in Compta if sold). **En retard** badge for `pending`/`ready` when scheduled delivery is past. Dates from API are normalized in `rowToCommande` via `toCalendarISODate` so string comparisons are safe (e.g. `2026-4-24` vs `2026-04-25`). `CommandesScreen` syncs the calendar day every ~5s and on focus/visibility so the list updates after midnight.
+* **Offres (bundles)**: `BundleOfferRule[]` in localStorage (`loadBundleRules` / `saveBundleRules`); used at sale time; commande → vente uses `buildCommandeSaleAllocations` + `frozenRevenue` for `addHistoryEntry`.
 * **Propagation**: Changing an ingredient price auto-recalculates all bases and desserts that use it
 
 ## 🗄️ Supabase Schema
@@ -79,4 +84,4 @@ Tailwind CSS v4 with `@theme` directive. Two card variants:
 * **Tout est net** — no TVA, no gross/net distinction. All amounts are net. Never add tax rows
 * **targetMargin** persisted in `localStorage['e1d_target_margin']` (default 0.65). Lifted to App.tsx state, passed as prop to CalculateScreen + SettingsScreen
 * **StatPeriod** (`'week' | 'month' | 'all'`) — `filterHistoryByPeriod()` in `calculations.ts`. Dashboard defaults to `'month'`
-* **Commande → Vente**: when advancing status to `delivered`, intercept and offer modal with "Enregistrer + Livrer" / "Livrer uniquement". Loops `commande.items`, calls `onAddSale(dessert, qty)` per item
+* **Commande → Vente**: when advancing status to `delivered`, modal "Enregistrer + Livrer" / "Livrer uniquement". Builds allocations via `buildCommandeSaleAllocations`, then `onAddSale` with `frozenRevenue` and labels so compta never depends on later rule changes

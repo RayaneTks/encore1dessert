@@ -277,7 +277,7 @@ export const CalculateScreen: React.FC<Props> = ({
 
         <div className="mb-3">
           <div
-            className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl border border-gourmand-border bg-white px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-gourmand-chocolate focus-within:border-gourmand-chocolate"
+            className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl border border-gourmand-border bg-white px-3 py-2 shadow-sm transition-[box-shadow,border-color] duration-200 focus-within:border-gourmand-chocolate/40 focus-within:ring-2 focus-within:ring-gourmand-chocolate/15"
           >
             <Search
               className="h-5 w-5 shrink-0 text-gourmand-biscuit"
@@ -290,7 +290,7 @@ export const CalculateScreen: React.FC<Props> = ({
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher un produit…"
-              className="min-h-0 min-w-0 flex-1 border-0 bg-transparent py-0.5 text-base font-medium text-gourmand-chocolate placeholder:text-gourmand-biscuit/60 outline-none"
+              className="min-h-0 min-w-0 flex-1 border-0 bg-transparent py-0.5 text-base font-medium text-gourmand-chocolate placeholder:text-gourmand-biscuit/60 outline-none focus:outline-none"
               autoComplete="off"
               enterKeyHint="search"
               inputMode="search"

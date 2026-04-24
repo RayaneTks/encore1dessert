@@ -14,6 +14,7 @@ import type {
   NotifyBefore,
 } from '../types';
 import { normalizeCommandeItems } from './commandeProduction';
+import { toCalendarISODate } from './dateLocal';
 
 function normalizeProductKind(raw: unknown): DessertProductKind {
   const v = typeof raw === 'string' ? raw : 'tarte';
@@ -374,12 +375,14 @@ export async function deleteHistoryEntry(id: string): Promise<void> {
 
 function rowToCommande(row: any): Commande {
   const rawItems = (row.items as CommandeItem[]) || [];
+  const orderRaw = row.order_date != null ? String(row.order_date) : '';
+  const delRaw = row.delivery_date != null ? String(row.delivery_date) : '';
   return {
     id: row.id,
     clientName: row.client_name,
     items: normalizeCommandeItems(rawItems),
-    orderDate: row.order_date,
-    deliveryDate: row.delivery_date,
+    orderDate: toCalendarISODate(orderRaw) || orderRaw,
+    deliveryDate: toCalendarISODate(delRaw) || delRaw,
     notes: row.notes || '',
     customerType: (row.customer_type as 'particulier' | 'pro') || 'particulier',
     status: row.status as CommandeStatus,
@@ -420,6 +423,7 @@ export async function upsertCommande(commande: Commande): Promise<Commande> {
   return rowToCommande(data);
 }
 
+/** Retire seulement la ligne `commandes` — l’historique compta (`history_entries`) n’est pas touché. */
 export async function deleteCommande(id: string): Promise<void> {
   const { error } = await supabase.from('commandes').delete().eq('id', id);
   if (error) throw error;

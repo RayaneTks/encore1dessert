@@ -55,7 +55,7 @@ export const Modal: React.FC<ModalProps> = ({ title, children, onClose, footer }
             type="button"
             onClick={onClose}
             aria-label="Fermer la fenêtre"
-            className="mx-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-gourmand-bg transition-colors hover:bg-gourmand-border/40 active:opacity-80"
+            className="mx-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-gourmand-bg transition-colors hover:bg-gourmand-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gourmand-chocolate/22 active:opacity-80"
           >
             <X size={18} />
           </button>
