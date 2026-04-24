@@ -995,7 +995,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="min-w-0">
-                  <FormLabel>Commandée le</FormLabel>
+                  <FormLabel>Commandé le</FormLabel>
                   <input
                     type="date"
                     className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
@@ -1137,11 +1137,14 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             <div className="min-w-0 space-y-4 pb-2">
               <div className="text-center">
                 <p className="text-xl font-bold leading-tight text-gourmand-chocolate">{editing.clientName}</p>
-                <p className="mt-1.5 text-sm text-gourmand-biscuit">
-                  Livraison le {formatDate(editing.deliveryDate)}
-                  {editing.orderDate !== editing.deliveryDate && (
-                    <span className="mt-0.5 block text-xs opacity-90">Commandée le {formatDate(editing.orderDate)}</span>
-                  )}
+                <p className="mt-1.5 text-center text-sm leading-snug text-gourmand-biscuit">
+                  <span className="inline">
+                    Commandé le {formatDate(editing.orderDate)}
+                    <span className="mx-1.5 text-gourmand-biscuit/50" aria-hidden>
+                      ·
+                    </span>
+                    Livraison le {formatDate(editing.deliveryDate)}
+                  </span>
                 </p>
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   <span
@@ -1199,7 +1202,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 <div className="space-y-4 border-t border-gourmand-border/60 pt-4">
                   <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
                     <div className="min-w-0 overflow-hidden">
-                      <FormLabel>Commandée le</FormLabel>
+                      <FormLabel>Commandé le</FormLabel>
                       <input
                         type="date"
                         className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
