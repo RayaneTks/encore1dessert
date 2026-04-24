@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Check, Package, Clock, ChevronRight, Bell, BellOff, X } from 'lucide-react';
+import { Plus, Trash2, Check, Package, Clock, ChevronRight, Bell, BellOff, X, ChefHat } from 'lucide-react';
 import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert } from '../types';
 import { PageHeader } from '../components/PageHeader';
+import { SectionCard } from '../components/SectionCard';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
@@ -81,6 +82,57 @@ function totalPieces(items: CommandeItem[]): number {
   return items.reduce((s, i) => s + i.quantity, 0);
 }
 
+/** Agrège les quantités par dessert pour les commandes non livrées (production). */
+type ProductionRow = {
+  key: string;
+  dessertId: string | null;
+  emoji: string;
+  name: string;
+  pendingQty: number;
+  readyQty: number;
+  totalQty: number;
+};
+
+function productionKey(item: CommandeItem): string | null {
+  if (item.dessertId) return `id:${item.dessertId}`;
+  const n = item.dessertName.trim();
+  if (!n) return null;
+  return `name:${n.toLowerCase()}`;
+}
+
+function aggregateProduction(commandes: Commande[]): ProductionRow[] {
+  const map = new Map<string, { dessertId: string | null; emoji: string; name: string; pendingQty: number; readyQty: number }>();
+  for (const cmd of commandes) {
+    if (cmd.status === 'delivered') continue;
+    for (const item of cmd.items) {
+      const qty = Math.max(0, item.quantity);
+      if (qty === 0) continue;
+      const key = productionKey(item);
+      if (!key) continue;
+      let row = map.get(key);
+      if (!row) {
+        row = {
+          dessertId: item.dessertId,
+          emoji: item.dessertEmoji?.trim() || '🍰',
+          name: item.dessertName.trim() || 'Dessert',
+          pendingQty: 0,
+          readyQty: 0,
+        };
+        map.set(key, row);
+      }
+      if (cmd.status === 'pending') row.pendingQty += qty;
+      else if (cmd.status === 'ready') row.readyQty += qty;
+    }
+  }
+  const rows: ProductionRow[] = [...map.entries()].map(([key, v]) => ({
+    key,
+    ...v,
+    totalQty: v.pendingQty + v.readyQty,
+  }));
+  rows.sort((a, b) => b.totalQty - a.totalQty || a.name.localeCompare(b.name, 'fr'));
+  return rows.filter(r => r.totalQty > 0);
+}
+
 const todayISO = new Date().toISOString().split('T')[0];
 
 const BLANK_ITEM: CommandeItem = { dessertId: null, dessertName: '', dessertEmoji: '🍰', quantity: 1 };
@@ -118,6 +170,18 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   }, [commandes, filter]);
 
   const pendingCount = useMemo(() => commandes.filter(c => c.status === 'pending').length, [commandes]);
+
+  const productionRows = useMemo(() => aggregateProduction(commandes), [commandes]);
+  const productionPending = useMemo(
+    () => productionRows.reduce((s, r) => s + r.pendingQty, 0),
+    [productionRows],
+  );
+  const productionReady = useMemo(
+    () => productionRows.reduce((s, r) => s + r.readyQty, 0),
+    [productionRows],
+  );
+  const productionTotal = productionPending + productionReady;
+  const productionDonePct = productionTotal > 0 ? Math.round((productionReady / productionTotal) * 100) : 0;
 
   const openNew = () => {
     setEditing({ ...BLANK, id: 'cmd-new', items: [{ ...BLANK_ITEM }], orderDate: todayISO, deliveryDate: todayISO });
@@ -232,7 +296,11 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       <PageHeader
         brand="Gestion"
         title="Commandes"
-        description={`${pendingCount} en attente · ${commandes.length} total`}
+        description={
+          productionTotal > 0
+            ? `${pendingCount} commande(s) en attente · ${commandes.length} au total · ${productionTotal} dessert(s) à produire`
+            : `${pendingCount} en attente · ${commandes.length} total`
+        }
         action={
           <IconActionButton
             size="compact"
@@ -259,6 +327,83 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
           </button>
         ))}
       </div>
+
+      {/* Synthèse production (desserts à fabriquer vs prêtes) */}
+      {productionRows.length > 0 && (
+        <div className="px-4 pb-3">
+          <SectionCard title="À produire" padding>
+            <div className="rounded-xl bg-gourmand-bg border border-gourmand-border/80 p-3.5 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gourmand-chocolate text-white">
+                  <ChefHat size={22} strokeWidth={2} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                    Total desserts (commandes non livrées)
+                  </p>
+                  <p className="mt-0.5 text-3xl font-bold tabular-nums text-gourmand-chocolate leading-none">
+                    {productionTotal}
+                  </p>
+                  <p className="mt-2 text-xs font-medium text-gourmand-cocoa">
+                    <span className="text-amber-700">{productionPending}</span>
+                    {' à fabriquer'}
+                    {productionReady > 0 && (
+                      <>
+                        {' · '}
+                        <span className="text-emerald-700">{productionReady}</span>
+                        {' prête(s)'}
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div
+                className="mt-3"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={productionDonePct}
+                aria-label="Part des desserts déjà marqués prêts sur le total à produire"
+              >
+                <div className="h-2 w-full overflow-hidden rounded-full bg-white">
+                  <div
+                    className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 ease-out"
+                    style={{ width: `${productionDonePct}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-[11px] text-gourmand-biscuit">
+                  Quand une commande est « Prête », ses desserts comptent ici comme fabriqués. Il reste à livrer pour clôturer.
+                </p>
+              </div>
+            </div>
+            <ul className="space-y-2.5">
+              {productionRows.map(row => (
+                <li
+                  key={row.key}
+                  className="flex items-center gap-2.5 rounded-xl border border-gourmand-border/60 bg-white px-3 py-2.5"
+                >
+                  <span className="text-xl leading-none shrink-0" aria-hidden>{row.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gourmand-chocolate truncate">{row.name}</p>
+                    <p className="text-[11px] text-gourmand-biscuit tabular-nums">
+                      {row.pendingQty > 0 && (
+                        <span className="text-amber-800 font-medium">{row.pendingQty} en fabrication</span>
+                      )}
+                      {row.pendingQty > 0 && row.readyQty > 0 && ' · '}
+                      {row.readyQty > 0 && (
+                        <span className="text-emerald-700 font-medium">{row.readyQty} prête(s)</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-lg bg-gourmand-bg px-2 py-1 text-xs font-bold tabular-nums text-gourmand-chocolate">
+                    {row.totalQty}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        </div>
+      )}
 
       {/* Banner permission notif */}
       {notifPerm === 'default' && isNotificationSupported() && (
