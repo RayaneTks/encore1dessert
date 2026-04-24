@@ -528,7 +528,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="h-full flex flex-col min-h-0 overflow-hidden"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-hidden"
     >
       <div className="shrink-0">
         <PageHeader
@@ -586,13 +586,14 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-2 pb-32">
+      <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide px-2 pb-32">
         {screenTab === 'commandes' && (
           <motion.div
             key="commandes-tab"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="min-w-0 overflow-x-hidden"
           >
             <div className="px-2 pb-3 flex gap-1.5 overflow-x-auto scrollbar-hide">
               {(['all', 'pending', 'ready', 'delivered'] as const).map(f => (
@@ -652,7 +653,6 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                     <motion.button
                       type="button"
                       key={cmd.id}
-                      layout
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
@@ -734,7 +734,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="px-3 space-y-3 pb-4"
+            className="min-w-0 space-y-3 overflow-x-hidden px-3 pb-4"
           >
             <div className="gourmand-card border px-4 py-3 rounded-2xl flex items-center gap-3 min-w-0">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gourmand-chocolate text-white">
@@ -845,7 +845,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       <AnimatePresence>
         {formOpen && (
           <Modal title="Nouvelle commande" onClose={() => setFormOpen(false)}>
-            <div className="p-5 space-y-4 max-h-[min(85vh,32rem)] overflow-y-auto scrollbar-hide">
+            <div className="min-w-0 space-y-4 pb-1">
               <div>
                 <FormLabel>Nom du client</FormLabel>
                 <input
@@ -867,46 +867,53 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                     <Plus size={16} strokeWidth={2.25} /> Ligne
                   </button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {editing.items.map((item, idx) => (
-                    <div key={idx} className="flex flex-wrap items-stretch gap-2 min-w-0 rounded-xl border border-gourmand-border bg-gourmand-bg/30 p-2">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center text-2xl leading-none" aria-hidden>
-                        {item.dessertEmoji || '🍰'}
-                      </span>
-                      <select
-                        className="gourmand-input flex-1 min-w-0 text-base py-2"
-                        value={item.dessertId || ''}
-                        onChange={e => handleDessertChange(idx, e.target.value)}
-                      >
-                        <option value="">—</option>
-                        {desserts.map(d => (
-                          <option key={d.id} value={d.id}>
-                            {d.emoji} {d.name}
-                          </option>
-                        ))}
-                      </select>
-                      <label className="sr-only" htmlFor={`new-qty-${idx}`}>
-                        Quantité
-                      </label>
-                      <input
-                        id={`new-qty-${idx}`}
-                        type="number"
-                        min={1}
-                        max={999}
-                        className="gourmand-input w-[4.5rem] shrink-0 text-center text-base py-2"
-                        value={item.quantity}
-                        onChange={e => setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })}
-                      />
-                      {editing.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem(idx)}
-                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50 cursor-pointer"
-                          aria-label="Retirer cette ligne"
+                    <div
+                      key={idx}
+                      className="flex min-w-0 flex-col gap-2 rounded-xl border border-gourmand-border bg-gourmand-bg/30 p-2 sm:flex-row sm:items-center"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center text-2xl leading-none" aria-hidden>
+                          {item.dessertEmoji || '🍰'}
+                        </span>
+                        <select
+                          className="gourmand-input min-h-11 min-w-0 flex-1 text-base"
+                          value={item.dessertId || ''}
+                          onChange={e => handleDessertChange(idx, e.target.value)}
                         >
-                          <X size={18} />
-                        </button>
-                      )}
+                          <option value="">—</option>
+                          {desserts.map(d => (
+                            <option key={d.id} value={d.id}>
+                              {d.emoji} {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex shrink-0 items-center justify-end gap-2">
+                        <label className="sr-only" htmlFor={`new-qty-${idx}`}>
+                          Quantité
+                        </label>
+                        <input
+                          id={`new-qty-${idx}`}
+                          type="number"
+                          min={1}
+                          max={999}
+                          className="gourmand-input h-11 w-16 shrink-0 text-center text-base"
+                          value={item.quantity}
+                          onChange={e => setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })}
+                        />
+                        {editing.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItem(idx)}
+                            className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50"
+                            aria-label="Retirer cette ligne"
+                          >
+                            <X size={18} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1018,10 +1025,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       <AnimatePresence>
         {detailCommand && (
           <Modal title={editing.clientName || 'Commande'} onClose={() => setDetailCommand(null)}>
-            <div className="p-4 max-h-[min(88vh,42rem)] overflow-y-auto scrollbar-hide space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-0 space-y-5 pb-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <span
-                  className={`gourmand-chip ${
+                  className={`gourmand-chip shrink-0 ${
                     editing.customerType === 'pro'
                       ? 'bg-gourmand-chocolate text-white'
                       : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
@@ -1030,7 +1037,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   {editing.customerType === 'pro' ? 'Pro' : 'Part.'}
                 </span>
                 <span
-                  className={`gourmand-chip ${
+                  className={`gourmand-chip shrink-0 ${
                     editing.status === 'pending'
                       ? 'bg-amber-100 text-amber-800'
                       : editing.status === 'ready'
@@ -1041,173 +1048,192 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   {STATUS_LABEL[editing.status]}
                 </span>
                 {editing.status === 'pending' && (
-                  <span className="text-xs font-medium tabular-nums text-gourmand-biscuit ml-auto">
+                  <span className="ml-auto shrink-0 text-xs font-medium tabular-nums text-gourmand-biscuit">
                     cuisine {producedPieces(detailCommand.items)}/{totalPieces(detailCommand.items)}
                   </span>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <FormLabel>Prise</FormLabel>
+              <section className="min-w-0 space-y-3" aria-label="Informations">
+                <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <FormLabel>Prise</FormLabel>
+                    <input
+                      type="date"
+                      className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
+                      value={editing.orderDate}
+                      onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <FormLabel>Livraison</FormLabel>
+                    <input
+                      type="date"
+                      className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
+                      value={editing.deliveryDate}
+                      onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="min-w-0">
+                  <FormLabel>Client</FormLabel>
                   <input
-                    type="date"
-                    className="gourmand-input w-full text-sm py-2"
-                    value={editing.orderDate}
-                    onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
+                    className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
+                    value={editing.clientName}
+                    onChange={e => setEditing(prev => ({ ...prev, clientName: e.target.value }))}
                   />
                 </div>
-                <div>
-                  <FormLabel>Livraison</FormLabel>
-                  <input
-                    type="date"
-                    className="gourmand-input w-full text-sm py-2"
-                    value={editing.deliveryDate}
-                    onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
+
+                <div className="grid min-w-0 grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
+                    className={`gourmand-segment-compact min-h-11 cursor-pointer text-base ${
+                      editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
+                    }`}
+                  >
+                    Particulier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
+                    className={`gourmand-segment-compact min-h-11 cursor-pointer text-base ${
+                      editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
+                    }`}
+                  >
+                    Pro
+                  </button>
+                </div>
+
+                <div className="min-w-0">
+                  <div className="mb-1.5 flex min-w-0 items-center gap-2">
+                    <Bell size={14} className="shrink-0 text-gourmand-biscuit" aria-hidden />
+                    <span className="text-xs font-semibold text-gourmand-biscuit">Rappels</span>
+                    {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
+                      <button
+                        type="button"
+                        onClick={handleRequestPerm}
+                        className="ml-auto shrink-0 cursor-pointer text-xs font-semibold text-gourmand-chocolate underline"
+                      >
+                        {notifPerm === 'denied' ? 'Bloqué' : 'Activer'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-wrap gap-2">
+                    {NOTIFY_OPTIONS.map(opt => (
+                      <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() => toggleNotify(opt.value)}
+                        disabled={notifPerm === 'denied' || notifPerm === 'unsupported'}
+                        className={`min-h-11 shrink-0 rounded-lg border px-3 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40 ${
+                          editing.notifyBefore.includes(opt.value)
+                            ? 'border-gourmand-chocolate bg-gourmand-chocolate text-white'
+                            : 'border-gourmand-border bg-white text-gourmand-biscuit'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="min-w-0">
+                  <FormLabel>Statut</FormLabel>
+                  <select
+                    className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
+                    value={editing.status}
+                    onChange={e => setEditing(prev => ({ ...prev, status: e.target.value as CommandeStatus }))}
+                  >
+                    <option value="pending">En attente</option>
+                    <option value="ready">Prête</option>
+                    <option value="delivered">Livrée</option>
+                  </select>
+                </div>
+
+                <div className="min-w-0">
+                  <FormLabel>Notes</FormLabel>
+                  <textarea
+                    className="gourmand-input w-full max-w-full min-w-0 resize-none text-base"
+                    rows={3}
+                    value={editing.notes}
+                    onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
                   />
                 </div>
-              </div>
+              </section>
 
-              <div>
-                <FormLabel>Client</FormLabel>
-                <input
-                  className="gourmand-input w-full text-base py-2.5"
-                  value={editing.clientName}
-                  onChange={e => setEditing(prev => ({ ...prev, clientName: e.target.value }))}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
-                  className={`gourmand-segment-compact min-h-11 cursor-pointer text-sm ${
-                    editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                  }`}
-                >
-                  Particulier
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
-                  className={`gourmand-segment-compact min-h-11 cursor-pointer text-sm ${
-                    editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                  }`}
-                >
-                  Pro
-                </button>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Bell size={14} className="text-gourmand-biscuit shrink-0" aria-hidden />
-                  <span className="text-xs font-semibold text-gourmand-biscuit">Rappels</span>
-                  {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
-                    <button type="button" onClick={handleRequestPerm} className="ml-auto text-xs font-semibold text-gourmand-chocolate underline cursor-pointer">
-                      {notifPerm === 'denied' ? 'Bloqué' : 'Activer'}
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {NOTIFY_OPTIONS.map(opt => (
-                    <button
-                      type="button"
-                      key={opt.value}
-                      onClick={() => toggleNotify(opt.value)}
-                      disabled={notifPerm === 'denied' || notifPerm === 'unsupported'}
-                      className={`min-h-9 px-2.5 rounded-lg text-[11px] font-semibold border cursor-pointer disabled:opacity-40 ${
-                        editing.notifyBefore.includes(opt.value)
-                          ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
-                          : 'bg-white text-gourmand-biscuit border-gourmand-border'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <FormLabel>Statut</FormLabel>
-                <select
-                  className="gourmand-input w-full text-base py-2.5"
-                  value={editing.status}
-                  onChange={e => setEditing(prev => ({ ...prev, status: e.target.value as CommandeStatus }))}
-                >
-                  <option value="pending">En attente</option>
-                  <option value="ready">Prête</option>
-                  <option value="delivered">Livrée</option>
-                </select>
-              </div>
-
-              <div>
-                <FormLabel>Notes</FormLabel>
-                <textarea
-                  className="gourmand-input w-full resize-none min-h-[72px] text-sm py-2"
-                  rows={2}
-                  value={editing.notes}
-                  onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
-
-              <div className="border-t border-gourmand-border/70 pt-3 space-y-2">
-                <div className="flex items-center justify-between gap-2 mb-1">
+              <section className="min-w-0 border-t border-gourmand-border/70 pt-4" aria-label="Desserts">
+                <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Desserts</span>
                   {editing.status === 'pending' && (
-                    <button type="button" onClick={addItem} className="text-xs font-semibold text-gourmand-chocolate cursor-pointer flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      className="flex shrink-0 cursor-pointer items-center gap-0.5 text-xs font-semibold text-gourmand-chocolate"
+                    >
                       <Plus size={14} /> ligne
                     </button>
                   )}
                 </div>
                 <div className="space-y-2">
                   {editing.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 min-w-0 rounded-lg border border-gourmand-border bg-gourmand-bg/20 pl-2 pr-1 py-1">
-                      <span className="text-lg shrink-0 w-8 text-center" aria-hidden>
-                        {item.dessertEmoji || '🍰'}
-                      </span>
-                      <select
-                        className="gourmand-input flex-1 min-w-0 text-sm py-2"
-                        value={item.dessertId || ''}
-                        onChange={e => handleDessertChange(idx, e.target.value)}
-                        disabled={editing.status !== 'pending'}
-                      >
-                        <option value="">—</option>
-                        {desserts.map(d => (
-                          <option key={d.id} value={d.id}>
-                            {d.emoji} {d.name}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min={1}
-                        max={999}
-                        disabled={editing.status !== 'pending'}
-                        className="gourmand-input w-14 shrink-0 text-center text-sm py-2 px-1 disabled:opacity-50"
-                        value={item.quantity}
-                        onChange={e => setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })}
-                      />
-                      {editing.items.length > 1 && editing.status === 'pending' && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem(idx)}
-                          className="shrink-0 p-2 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer"
-                          aria-label="Supprimer la ligne"
+                    <div
+                      key={idx}
+                      className="flex min-w-0 flex-col gap-2 rounded-xl border border-gourmand-border bg-gourmand-bg/20 p-2 sm:flex-row sm:items-center"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="w-9 shrink-0 text-center text-lg" aria-hidden>
+                          {item.dessertEmoji || '🍰'}
+                        </span>
+                        <select
+                          className="gourmand-input min-h-11 min-w-0 flex-1 text-base"
+                          value={item.dessertId || ''}
+                          onChange={e => handleDessertChange(idx, e.target.value)}
+                          disabled={editing.status !== 'pending'}
                         >
-                          <X size={16} />
-                        </button>
-                      )}
+                          <option value="">—</option>
+                          {desserts.map(d => (
+                            <option key={d.id} value={d.id}>
+                              {d.emoji} {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex shrink-0 items-center justify-end gap-2 sm:w-auto">
+                        <input
+                          type="number"
+                          min={1}
+                          max={999}
+                          disabled={editing.status !== 'pending'}
+                          className="gourmand-input h-11 w-16 shrink-0 text-center text-base disabled:opacity-50"
+                          value={item.quantity}
+                          onChange={e =>
+                            setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })
+                          }
+                        />
+                        {editing.items.length > 1 && editing.status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={() => removeItem(idx)}
+                            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-red-400 hover:bg-red-50"
+                            aria-label="Supprimer la ligne"
+                          >
+                            <X size={18} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
 
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="flex min-w-0 flex-col gap-2 border-t border-gourmand-border/60 pt-4">
                 <button
                   type="button"
                   onClick={() => void handleSaveDetailCommand()}
                   disabled={saving}
-                  className="gourmand-btn-primary w-full cursor-pointer disabled:cursor-not-allowed"
+                  className="gourmand-btn-primary w-full max-w-full cursor-pointer disabled:cursor-not-allowed"
                 >
                   {saving ? '…' : 'Enregistrer'}
                 </button>
@@ -1215,21 +1241,25 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   <button
                     type="button"
                     onClick={() => void handleAdvanceStatus(detailCommand)}
-                    className="min-h-11 w-full rounded-xl border border-gourmand-border bg-white text-sm font-semibold text-gourmand-chocolate flex items-center justify-center gap-2 cursor-pointer active:bg-gourmand-bg"
+                    className="flex min-h-11 w-full max-w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gourmand-border bg-white text-base font-semibold text-gourmand-chocolate active:bg-gourmand-bg"
                   >
-                    <Check size={16} strokeWidth={2.5} aria-hidden />
+                    <Check size={18} strokeWidth={2.5} aria-hidden />
                     {STATUS_NEXT_LABEL[detailCommand.status]}
                   </button>
                 )}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid min-w-0 grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(detailCommand)}
-                    className="min-h-11 rounded-xl border border-red-100 text-sm font-semibold text-red-500 active:bg-red-50 cursor-pointer"
+                    className="min-h-11 w-full max-w-full cursor-pointer rounded-xl border border-red-100 text-sm font-semibold text-red-500 active:bg-red-50"
                   >
                     Supprimer
                   </button>
-                  <button type="button" onClick={() => setDetailCommand(null)} className="min-h-11 rounded-xl border border-gourmand-border text-sm font-semibold text-gourmand-cocoa cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setDetailCommand(null)}
+                    className="min-h-11 w-full max-w-full cursor-pointer rounded-xl border border-gourmand-border text-sm font-semibold text-gourmand-cocoa"
+                  >
                     Fermer
                   </button>
                 </div>

@@ -22,14 +22,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[250] flex items-center justify-center px-8"
+      className="fixed inset-0 z-[250] flex max-h-[100dvh] items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-8"
     >
       <div className="absolute inset-0 bg-gourmand-chocolate/50 backdrop-blur-sm" onClick={onCancel} />
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="relative bg-white rounded-[28px] shadow-2xl w-full max-w-[320px] overflow-hidden"
+        className="relative w-full max-w-[min(100%,320px)] overflow-hidden rounded-[28px] bg-white shadow-2xl"
       >
         <div className="p-6 text-center">
           <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">

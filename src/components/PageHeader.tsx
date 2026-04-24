@@ -9,9 +9,9 @@ interface PageHeaderProps {
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ brand, title, description, action }) => {
   return (
-    <header className="px-4 pt-8 pb-6 sticky top-0 bg-gourmand-bg/90 backdrop-blur-xl z-30">
-      <div className="flex justify-between items-start">
-        <div className="max-w-[80%]">
+    <header className="sticky top-0 z-30 bg-gourmand-bg/90 px-4 pb-6 pt-8 backdrop-blur-xl">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 max-w-[min(100%,calc(100%-3.5rem))] flex-1">
           {brand && <p className="text-[11px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-2">{brand}</p>}
           <h1 className="text-3xl font-bold tracking-tight leading-tight mb-1">{title}</h1>
           {description && <p className="text-[13px] font-semibold text-gourmand-cocoa/70 leading-relaxed">{description}</p>}

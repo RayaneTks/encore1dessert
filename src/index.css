@@ -17,9 +17,12 @@
 @layer base {
   html, body, #root {
     @apply h-full w-full overflow-hidden antialiased;
+    max-width: 100%;
+    overflow-x: hidden;
     background-color: var(--color-gourmand-bg);
     color: var(--color-gourmand-chocolate);
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   body {
@@ -121,7 +124,18 @@ a:focus-visible {
 
 .app-container {
   @apply relative w-full h-full max-w-[430px] mx-auto bg-gourmand-bg overflow-hidden flex flex-col sm:shadow-[0_0_80px_rgba(0,0,0,0.05)] sm:border-x sm:border-gourmand-border;
+  max-width: min(430px, 100%);
+  overflow-x: hidden;
   padding-top: env(safe-area-inset-top);
+}
+
+/* Modales / overlays : évite le scroll horizontal parasite sur iOS */
+.modal-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 
 .safe-area-bottom {
