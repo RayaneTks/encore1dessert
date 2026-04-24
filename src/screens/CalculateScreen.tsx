@@ -4,6 +4,7 @@ import { ChevronRight, TrendingUp, Check, Calculator, Clock } from 'lucide-react
 import { Dessert, RawIngredient, Base, Commande, Tab } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
+import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow } from '../components/FilterControls';
 import {
   fmt,
   calculateDessertCost,
@@ -149,28 +150,15 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         </SectionCard>
 
         <SectionCard title="Type client">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => { setCustomerType('particulier'); setPriceOverride(''); }}
-              className={`gourmand-segment ${
-                customerType === 'particulier'
-                  ? 'gourmand-segment-active'
-                  : 'gourmand-segment-idle'
-              }`}
-            >
-              Particulier
-            </button>
-            <button
-              onClick={() => { setCustomerType('pro'); setPriceOverride(''); }}
-              className={`gourmand-segment ${
-                customerType === 'pro'
-                  ? 'gourmand-segment-active'
-                  : 'gourmand-segment-idle'
-              }`}
-            >
-              Pro
-            </button>
-          </div>
+          <FilterChipRow
+            options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
+            value={customerType}
+            onChange={v => {
+              setCustomerType(v);
+              setPriceOverride('');
+            }}
+            aria-label="Type de client pour le tarif"
+          />
         </SectionCard>
 
         {/* Quantity + Price override */}

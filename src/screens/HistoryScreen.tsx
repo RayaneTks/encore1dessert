@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, ChevronDown, X, Settings, ChevronRight, SlidersHorizontal, CalendarDays, Users, RotateCcw } from 'lucide-react';
+import { Trash2, ChevronDown, X, Settings, ChevronRight, RotateCcw } from 'lucide-react';
 import { HistoryEntry, Commande, Tab, StatPeriod } from '../types';
 import { PageHeader } from '../components/PageHeader';
-import { FilterPopoverButton, FilterMenuRadioGroup } from '../components/FilterMenu';
+import { IconActionButton } from '../components/IconActionButton';
+import { CUSTOMER_TYPE_OPTIONS, FilterChipRow, FilterField } from '../components/FilterControls';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { fmt, fmtPct, computeGlobalStats, filterHistoryByPeriod, filterHistoryByCustomerType } from '../lib/calculations';
@@ -69,86 +70,51 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
         title="Dashboard"
         description={`${periodLabel} · ${stats.totalSales} vente${stats.totalSales > 1 ? 's' : ''}`}
         action={
-          <button
+          <IconActionButton
+            size="compact"
             onClick={() => setActiveTab('settings')}
-            className="w-9 h-9 rounded-full bg-gourmand-bg border border-gourmand-border flex items-center justify-center text-gourmand-biscuit flex-shrink-0 active:scale-95 transition-transform"
-          >
-            <Settings size={16} />
-          </button>
+            icon={<Settings size={18} strokeWidth={2} />}
+            label="Ouvrir les réglages"
+          />
         }
       />
 
       <div className="px-4 space-y-4">
-        {/* Filtres */}
-        <div className="gourmand-card p-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal size={14} className="text-gourmand-biscuit" />
-              <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit">Filtres</p>
-            </div>
+        <div className="min-w-0 space-y-3 pt-1">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">Filtres</h2>
             {hasCustomFilters && (
               <button
-                onClick={() => { setPeriod('month'); setCustomerFilter('all'); }}
-                className="flex items-center gap-1 text-xs font-semibold text-gourmand-biscuit hover:text-gourmand-chocolate transition-colors"
+                type="button"
+                onClick={() => {
+                  setPeriod('month');
+                  setCustomerFilter('all');
+                }}
+                className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-gourmand-biscuit transition-colors hover:bg-gourmand-border/40 hover:text-gourmand-chocolate active:scale-[0.98]"
               >
-                <RotateCcw size={12} />
+                <RotateCcw size={12} aria-hidden />
                 Réinitialiser
               </button>
             )}
           </div>
-
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit/90 mb-2 flex items-center gap-1.5">
-              <CalendarDays size={12} />
-              Période
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {PERIODS.map(p => (
-                <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => setPeriod(p.value)}
-                  className={`h-11 rounded-xl text-xs font-semibold transition-all border ${
-                    period === p.value
-                      ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm'
-                      : 'bg-white text-gourmand-biscuit border-gourmand-border'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit/90 flex items-center gap-1.5">
-              <Users size={12} />
-              Type client
-            </p>
-            <FilterPopoverButton
+          <FilterField label="Période">
+            <FilterChipRow
+              options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
+              value={period}
+              onChange={setPeriod}
+              aria-label="Filtrer par période"
+            />
+          </FilterField>
+          <FilterField label="Type client">
+            <FilterChipRow
+              options={CUSTOMER_TYPE_OPTIONS}
+              value={customerFilter}
+              onChange={setCustomerFilter}
               aria-label="Filtrer par type de client"
-              badgeCount={customerFilter === 'all' ? 0 : 1}
-            >
-              {({ close }) => (
-                <FilterMenuRadioGroup
-                  title="Afficher"
-                  options={[
-                    { value: 'all', label: 'Tous les clients' },
-                    { value: 'particulier', label: 'Particuliers' },
-                    { value: 'pro', label: 'Professionnels' },
-                  ]}
-                  value={customerFilter}
-                  onChange={v => {
-                    setCustomerFilter(v);
-                    close();
-                  }}
-                />
-              )}
-            </FilterPopoverButton>
-          </div>
-
-          <p className="text-xs text-gourmand-biscuit font-medium">
-            Affichage: {periodLabel} · {customerLabel}
+            />
+          </FilterField>
+          <p className="px-0.5 text-xs text-gourmand-biscuit/80">
+            {periodLabel} · {customerLabel}
           </p>
         </div>
 

@@ -97,22 +97,6 @@ a:focus-visible {
   @apply min-h-[44px] px-4 bg-white border border-gourmand-border text-gourmand-cocoa font-semibold rounded-xl flex items-center justify-center transition-colors active:bg-gourmand-bg disabled:opacity-50;
 }
 
-.gourmand-segment {
-  @apply min-h-[44px] px-3 rounded-xl text-sm font-semibold border transition-colors;
-}
-
-.gourmand-segment-compact {
-  @apply min-h-[38px] px-2.5 py-2 rounded-lg text-xs font-semibold border transition-colors;
-}
-
-.gourmand-segment-active {
-  @apply bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm;
-}
-
-.gourmand-segment-idle {
-  @apply bg-white text-gourmand-biscuit border-gourmand-border;
-}
-
 .gourmand-chip {
   @apply text-xs font-semibold px-2 py-1 rounded-full;
 }

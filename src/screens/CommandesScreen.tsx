@@ -20,7 +20,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
-import { FilterPopoverButton, FilterMenuRadioGroup } from '../components/FilterMenu';
+import { CUSTOMER_TYPE_OPTIONS, CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow, FilterField } from '../components/FilterControls';
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -675,59 +675,27 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             className="min-w-0 overflow-x-hidden"
           >
             <div className="px-2 pb-2 space-y-3">
-              <div>
-                <p className="mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
-                  Statut
-                </p>
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
-                  {(
-                    [
-                      { value: 'all' as const, label: 'Toutes' },
-                      { value: 'pending' as const, label: STATUS_LABEL.pending },
-                      { value: 'ready' as const, label: STATUS_LABEL.ready },
-                      { value: 'delivered' as const, label: STATUS_LABEL.delivered },
-                    ] as const
-                  ).map(f => (
-                    <button
-                      key={f.value}
-                      type="button"
-                      onClick={() => setFilter(f.value)}
-                      className={`shrink-0 rounded-full border px-3.5 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-[0.98] ${
-                        filter === f.value
-                          ? 'border-gourmand-chocolate bg-gourmand-chocolate text-white'
-                          : 'border-gourmand-border bg-gourmand-bg text-gourmand-cocoa'
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
-                  Type client
-                </p>
-                <FilterPopoverButton
+              <FilterField label="Statut">
+                <FilterChipRow
+                  options={[
+                    { value: 'all', label: 'Toutes' },
+                    { value: 'pending', label: STATUS_LABEL.pending },
+                    { value: 'ready', label: STATUS_LABEL.ready },
+                    { value: 'delivered', label: STATUS_LABEL.delivered },
+                  ]}
+                  value={filter}
+                  onChange={setFilter}
+                  aria-label="Filtrer par statut de commande"
+                />
+              </FilterField>
+              <FilterField label="Type client">
+                <FilterChipRow
+                  options={CUSTOMER_TYPE_OPTIONS}
+                  value={customerFilterOrdres}
+                  onChange={setCustomerFilterOrdres}
                   aria-label="Filtrer par type de client"
-                  badgeCount={customerFilterOrdres === 'all' ? 0 : 1}
-                >
-                  {({ close }) => (
-                    <FilterMenuRadioGroup
-                      title="Afficher"
-                      options={[
-                        { value: 'all', label: 'Tous les clients' },
-                        { value: 'particulier', label: 'Particuliers' },
-                        { value: 'pro', label: 'Professionnels' },
-                      ]}
-                      value={customerFilterOrdres}
-                      onChange={v => {
-                        setCustomerFilterOrdres(v);
-                        close();
-                      }}
-                    />
-                  )}
-                </FilterPopoverButton>
-              </div>
+                />
+              </FilterField>
             </div>
 
             {notifPerm === 'default' && isNotificationSupported() && (
@@ -1060,25 +1028,13 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
               <div>
                 <FormLabel>Type client</FormLabel>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
-                    className={`gourmand-segment-compact min-h-11 cursor-pointer ${
-                      editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                    }`}
-                  >
-                    Particulier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
-                    className={`gourmand-segment-compact min-h-11 cursor-pointer ${
-                      editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                    }`}
-                  >
-                    Pro
-                  </button>
+                <div className="mt-1">
+                  <FilterChipRow
+                    options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
+                    value={editing.customerType}
+                    onChange={v => setEditing(prev => ({ ...prev, customerType: v }))}
+                    aria-label="Type de client"
+                  />
                 </div>
               </div>
 
@@ -1283,25 +1239,13 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
-                      className={`gourmand-segment-compact min-h-11 text-base ${
-                        editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                      }`}
-                    >
-                      Particulier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
-                      className={`gourmand-segment-compact min-h-11 text-base ${
-                        editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                      }`}
-                    >
-                      Pro
-                    </button>
+                  <div>
+                    <FilterChipRow
+                      options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
+                      value={editing.customerType}
+                      onChange={v => setEditing(prev => ({ ...prev, customerType: v }))}
+                      aria-label="Type de client"
+                    />
                   </div>
 
                   <div className="min-w-0">
