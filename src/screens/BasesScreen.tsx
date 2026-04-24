@@ -153,9 +153,14 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                           let lineCost = 0;
                           if (ing) lineCost = ing.unit === 'u' ? ing.pricePerKg * comp.quantity : (ing.pricePerKg * comp.quantity) / 1000;
                           return (
-                            <div key={idx} className="flex justify-between items-center text-sm">
-                              <span className="font-medium">{ingName}</span>
-                              <div className="flex items-center gap-3">
+                            <div key={idx} className="flex justify-between items-center gap-2 text-sm">
+                              <span className="flex min-w-0 flex-1 items-center gap-2 font-medium">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center text-lg leading-none" aria-hidden>
+                                  {ing?.emoji ?? '🥄'}
+                                </span>
+                                <span className="truncate">{ingName}</span>
+                              </span>
+                              <div className="flex shrink-0 items-center gap-3">
                                 <span className="text-gourmand-biscuit text-xs">{comp.quantity}{ingUnit}</span>
                                 <span className="font-semibold w-16 text-right">{fmt(lineCost)}</span>
                               </div>

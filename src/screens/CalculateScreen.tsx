@@ -9,6 +9,7 @@ import {
   fmt,
   calculateDessertCost,
   resolveComponentName,
+  resolveComponentEmoji,
   resolveComponentUnit,
   findIngredient,
   findBase,
@@ -54,6 +55,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
     if (!selected) return [];
     return selected.components.map(comp => {
       const name = resolveComponentName(comp.type, comp.id, ingredients, bases);
+      const emoji = resolveComponentEmoji(comp.type, comp.id, ingredients, bases);
       const unit = resolveComponentUnit(comp.type, comp.id, ingredients);
       let lineCost = 0;
       if (comp.type === 'ingredient') {
@@ -63,7 +65,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         const base = findBase(bases, comp.id);
         if (base) lineCost = (calculateBaseCostPerKg(base, ingredients) * comp.quantity) / 1000;
       }
-      return { name, type: comp.type, quantity: comp.quantity, unit, lineCost };
+      return { name, emoji, type: comp.type, quantity: comp.quantity, unit, lineCost };
     });
   }, [selected, ingredients, bases]);
 
@@ -250,11 +252,14 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
                 >
                   <div className="bg-gourmand-bg border border-gourmand-border rounded-xl p-4 space-y-2 mt-1">
                     {lines.map((line, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-sm">
-                        <span className="font-medium text-gourmand-chocolate">
-                          {line.type === 'base' ? '🍯' : '🍎'} {line.name}
+                      <div key={idx} className="flex justify-between items-center gap-2 text-sm">
+                        <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-gourmand-chocolate">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center text-lg leading-none" aria-hidden>
+                            {line.emoji}
+                          </span>
+                          <span className="truncate">{line.name}</span>
                         </span>
-                        <div className="flex items-center gap-3">
+                        <div className="flex shrink-0 items-center gap-3">
                           <span className="text-gourmand-biscuit text-xs">{line.quantity}{line.unit}</span>
                           <span className="font-semibold w-16 text-right text-gourmand-chocolate">{fmt(line.lineCost)}</span>
                         </div>

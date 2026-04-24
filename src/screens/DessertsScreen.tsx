@@ -7,7 +7,16 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
-import { fmt, calculateDessertCost, resolveComponentName, resolveComponentUnit, findIngredient, calculateBaseCostPerKg, findBase } from '../lib/calculations';
+import {
+  fmt,
+  calculateDessertCost,
+  resolveComponentName,
+  resolveComponentEmoji,
+  resolveComponentUnit,
+  findIngredient,
+  calculateBaseCostPerKg,
+  findBase,
+} from '../lib/calculations';
 
 interface Props {
   desserts: Dessert[];
@@ -236,13 +245,16 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                               const base = findBase(bases, comp.id);
                               if (base) lineCost = (calculateBaseCostPerKg(base, ingredients) * comp.quantity) / 1000;
                             }
+                            const cEmoji = resolveComponentEmoji(comp.type, comp.id, ingredients, bases);
                             return (
-                              <div key={idx} className="flex justify-between items-center text-sm">
-                                <span className="font-medium text-gourmand-chocolate flex items-center gap-2">
-                                  {comp.type === 'base' ? <Beaker size={14} className="text-gourmand-biscuit" /> : <Apple size={14} className="text-gourmand-biscuit" />}
-                                  {cName}
+                              <div key={idx} className="flex justify-between items-center gap-2 text-sm">
+                                <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-gourmand-chocolate">
+                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center text-lg leading-none" aria-hidden>
+                                    {cEmoji}
+                                  </span>
+                                  <span className="truncate">{cName}</span>
                                 </span>
-                                <div className="flex items-center gap-3">
+                                <div className="flex shrink-0 items-center gap-3">
                                   <span className="text-gourmand-biscuit text-xs">{comp.quantity}{cUnit}</span>
                                   <span className="font-semibold text-gourmand-chocolate w-16 text-right">{fmt(lineCost)}</span>
                                 </div>
@@ -321,8 +333,13 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                     <h4 className="text-xs font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2"><Beaker size={14} /> Bases maison (g)</h4>
                     <div className="space-y-2">
                       {bases.map(b => (
-                        <div key={b.id} className="flex items-center justify-between p-3 bg-gourmand-bg rounded-xl">
-                          <span className="text-sm font-medium">{b.name}</span>
+                        <div key={b.id} className="flex items-center justify-between gap-2 p-3 bg-gourmand-bg rounded-xl">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center text-lg leading-none" aria-hidden>
+                              {b.emoji}
+                            </span>
+                            <span className="truncate">{b.name}</span>
+                          </span>
                           <input type="number" placeholder="0" value={compMap[b.id]?.qty || ''}
                             className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate"
                             onChange={e => setCompMap(prev => ({ ...prev, [b.id]: { type: 'base', qty: parseFloat(e.target.value) || 0 } }))}
@@ -339,8 +356,13 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                     {ingredients.map(i => {
                       const iUnit = i.unit === 'u' ? 'u' : i.unit === 'L' ? 'ml' : 'g';
                       return (
-                        <div key={i.id} className="flex items-center justify-between p-3 bg-gourmand-bg rounded-xl">
-                          <span className="text-sm font-medium">{i.name}</span>
+                        <div key={i.id} className="flex items-center justify-between gap-2 p-3 bg-gourmand-bg rounded-xl">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center text-lg leading-none" aria-hidden>
+                              {i.emoji}
+                            </span>
+                            <span className="truncate">{i.name}</span>
+                          </span>
                           <div className="flex items-center gap-2">
                             <input type="number" placeholder="0" value={compMap[i.id]?.qty || ''}
                               className="w-20 bg-white border border-gourmand-border rounded-lg text-right px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-gourmand-chocolate"

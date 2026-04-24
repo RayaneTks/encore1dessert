@@ -79,6 +79,19 @@ export const resolveComponentName = (
   return findBase(bases, id)?.name || 'Inconnu';
 };
 
+/** Emoji de la matière première ou de la base (pour listes de composition). */
+export const resolveComponentEmoji = (
+  type: 'ingredient' | 'base',
+  id: string,
+  ingredients: RawIngredient[],
+  bases: Base[]
+): string => {
+  if (type === 'ingredient') {
+    return findIngredient(ingredients, id)?.emoji ?? '🥄';
+  }
+  return findBase(bases, id)?.emoji ?? '🍯';
+};
+
 export const resolveComponentUnit = (
   type: 'ingredient' | 'base',
   id: string,
