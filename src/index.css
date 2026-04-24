@@ -114,7 +114,8 @@ input[type='date'] {
 }
 
 .section-title {
-  @apply text-sm font-semibold text-gourmand-cocoa ml-4 mb-4;
+  /* Petit espace sous le titre = lié au champ en dessous ; l’écart avec la carte du dessus vient du parent (space-y) */
+  @apply text-sm font-semibold text-gourmand-cocoa ml-4 mb-1.5;
 }
 
 /* Navigation IOS Native Feeling - Slim & Blurred */

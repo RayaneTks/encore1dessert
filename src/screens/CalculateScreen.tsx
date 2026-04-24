@@ -108,7 +108,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         description="Sélectionnez un produit et enregistrez la vente."
       />
 
-      <div className="px-4 space-y-4">
+      <div className="px-4 space-y-6">
         {/* Banner commandes du jour */}
         <AnimatePresence>
           {todayCommandes.length > 0 && (
@@ -117,7 +117,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onClick={() => setActiveTab('commandes')}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-left overflow-hidden"
+              className="mb-1 w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-left overflow-hidden"
             >
               <Clock size={14} className="text-amber-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -134,7 +134,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         </AnimatePresence>
 
         {/* Dessert selector */}
-        <SectionCard title="Produit à encaisser">
+        <SectionCard title="Produit à encaisser" stackClassName={todayCommandes.length > 0 ? 'pt-1' : ''}>
           <div className="relative">
             <select
               className="w-full px-4 py-3 bg-white border border-gourmand-border rounded-xl font-semibold text-base focus:outline-none focus:border-gourmand-chocolate appearance-none cursor-pointer pr-12 shadow-sm text-gourmand-chocolate"
@@ -164,7 +164,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
         </SectionCard>
 
         {/* Quantity + Price override */}
-        <div className="grid grid-cols-2 gap-3 items-start mt-2">
+        <div className="grid grid-cols-2 gap-3 items-start pt-1">
           <SectionCard title="Quantité">
             <div className="flex items-center justify-between">
               <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-11 h-11 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">−</button>
@@ -198,7 +198,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
 
         {/* Financial Summary */}
         {selected && (
-          <div className="space-y-3">
+          <div className="space-y-4 pt-1">
             <div className="gourmand-card-dark p-4 relative overflow-hidden shadow-lg shadow-gourmand-chocolate/10">
               <div className="absolute top-4 right-6 opacity-5"><TrendingUp size={56} /></div>
 
@@ -281,7 +281,7 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
           onClick={handleValidate}
           disabled={!selected || validated}
           animate={validated ? { scale: [1, 1.05, 1] } : {}}
-          className={`w-full py-4 rounded-xl text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-3 transition-colors active:scale-[0.98] mt-2 ${
+          className={`w-full py-4 rounded-xl text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-3 transition-colors active:scale-[0.98] mt-4 ${
             validated
               ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
               : 'bg-gourmand-chocolate text-white shadow-lg shadow-gourmand-chocolate/10 hover:bg-black'
