@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, ChevronDown, X, Settings, ChevronRight, SlidersHorizontal, CalendarDays, Users, RotateCcw } from 'lucide-react';
 import { HistoryEntry, Commande, Tab, StatPeriod } from '../types';
 import { PageHeader } from '../components/PageHeader';
-import { FilterSegmentGrid } from '../components/FilterSegmentGrid';
+import { FilterPopoverButton, FilterMenuRadioGroup } from '../components/FilterMenu';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { fmt, fmtPct, computeGlobalStats, filterHistoryByPeriod, filterHistoryByCustomerType } from '../lib/calculations';
@@ -102,33 +102,49 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
               <CalendarDays size={12} />
               Période
             </p>
-            <FilterSegmentGrid
-              options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
-              value={period}
-              onChange={setPeriod}
-              density="comfortable"
-              columns={3}
-              aria-label="Filtrer par période"
-            />
+            <div className="grid grid-cols-3 gap-2">
+              {PERIODS.map(p => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPeriod(p.value)}
+                  className={`h-11 rounded-xl text-xs font-semibold transition-all border ${
+                    period === p.value
+                      ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm'
+                      : 'bg-white text-gourmand-biscuit border-gourmand-border'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit/90 mb-2 flex items-center gap-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-gourmand-biscuit/90 flex items-center gap-1.5">
               <Users size={12} />
               Type client
             </p>
-            <FilterSegmentGrid
-              options={[
-                { value: 'all', label: 'Tout' },
-                { value: 'particulier', label: 'Partic.' },
-                { value: 'pro', label: 'Pro' },
-              ]}
-              value={customerFilter}
-              onChange={setCustomerFilter}
-              density="comfortable"
-              columns={3}
+            <FilterPopoverButton
               aria-label="Filtrer par type de client"
-            />
+              badgeCount={customerFilter === 'all' ? 0 : 1}
+            >
+              {({ close }) => (
+                <FilterMenuRadioGroup
+                  title="Afficher"
+                  options={[
+                    { value: 'all', label: 'Tous les clients' },
+                    { value: 'particulier', label: 'Particuliers' },
+                    { value: 'pro', label: 'Professionnels' },
+                  ]}
+                  value={customerFilter}
+                  onChange={v => {
+                    setCustomerFilter(v);
+                    close();
+                  }}
+                />
+              )}
+            </FilterPopoverButton>
           </div>
 
           <p className="text-xs text-gourmand-biscuit font-medium">

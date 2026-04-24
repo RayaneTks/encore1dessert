@@ -20,7 +20,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
-import { FilterSegmentGrid } from '../components/FilterSegmentGrid';
+import { FilterPopoverButton, FilterMenuRadioGroup } from '../components/FilterMenu';
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -679,36 +679,54 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 <p className="mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
                   Statut
                 </p>
-                <FilterSegmentGrid
-                  options={[
-                    { value: 'all', label: 'Toutes' },
-                    { value: 'pending', label: STATUS_LABEL.pending },
-                    { value: 'ready', label: STATUS_LABEL.ready },
-                    { value: 'delivered', label: STATUS_LABEL.delivered },
-                  ]}
-                  value={filter}
-                  onChange={setFilter}
-                  density="compact"
-                  columns={4}
-                  aria-label="Filtrer par statut de commande"
-                />
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+                  {(
+                    [
+                      { value: 'all' as const, label: 'Toutes' },
+                      { value: 'pending' as const, label: STATUS_LABEL.pending },
+                      { value: 'ready' as const, label: STATUS_LABEL.ready },
+                      { value: 'delivered' as const, label: STATUS_LABEL.delivered },
+                    ] as const
+                  ).map(f => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => setFilter(f.value)}
+                      className={`shrink-0 rounded-full border px-3.5 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-[0.98] ${
+                        filter === f.value
+                          ? 'border-gourmand-chocolate bg-gourmand-chocolate text-white'
+                          : 'border-gourmand-border bg-gourmand-bg text-gourmand-cocoa'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <p className="mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
-                  Client
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                  Type client
                 </p>
-                <FilterSegmentGrid
-                  options={[
-                    { value: 'all', label: 'Tous' },
-                    { value: 'particulier', label: 'Part.' },
-                    { value: 'pro', label: 'Pro' },
-                  ]}
-                  value={customerFilterOrdres}
-                  onChange={setCustomerFilterOrdres}
-                  density="compact"
-                  columns={3}
+                <FilterPopoverButton
                   aria-label="Filtrer par type de client"
-                />
+                  badgeCount={customerFilterOrdres === 'all' ? 0 : 1}
+                >
+                  {({ close }) => (
+                    <FilterMenuRadioGroup
+                      title="Afficher"
+                      options={[
+                        { value: 'all', label: 'Tous les clients' },
+                        { value: 'particulier', label: 'Particuliers' },
+                        { value: 'pro', label: 'Professionnels' },
+                      ]}
+                      value={customerFilterOrdres}
+                      onChange={v => {
+                        setCustomerFilterOrdres(v);
+                        close();
+                      }}
+                    />
+                  )}
+                </FilterPopoverButton>
               </div>
             </div>
 
