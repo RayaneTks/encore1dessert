@@ -168,12 +168,17 @@ function NotesChecklistUnits({
   if (q > NOTES_CHECKLIST_MAX_ROWS) {
     return (
       <div className="rounded-lg border border-gourmand-border/80 bg-white px-3 py-2 space-y-2" role="group">
-        <div className="min-w-0">
-          <p className="text-[15px] font-semibold text-gourmand-chocolate truncate">{clientName}</p>
-          <p className="text-xs text-gourmand-biscuit truncate">
+        <button
+          type="button"
+          disabled={disabled || p >= q}
+          onClick={() => onChange(Math.min(q, p + 1))}
+          className="w-full min-h-11 text-left rounded-lg px-1 py-1 -mx-1 cursor-pointer transition-colors hover:bg-gourmand-bg/60 active:bg-gourmand-bg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        >
+          <p className="text-[15px] font-semibold text-gourmand-chocolate truncate pointer-events-none">{clientName}</p>
+          <p className="text-xs text-gourmand-biscuit truncate pointer-events-none">
             {deliveryShort} · ×{q}
           </p>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -208,32 +213,39 @@ function NotesChecklistUnits({
       {Array.from({ length: q }, (_, i) => {
         const filled = i < p;
         return (
-          <li key={i} className="flex items-center gap-3 min-h-[48px] pl-3 pr-2">
+          <li key={i} className="border-b border-gourmand-border/50 last:border-b-0">
             <button
               type="button"
               disabled={disabled}
               aria-pressed={filled}
               aria-label={`${clientName} — unité ${i + 1} sur ${q}`}
               onClick={() => onChange(nextProducedTap(i, p, q))}
-              className={`shrink-0 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gourmand-chocolate ${
-                filled ? 'border-emerald-600 bg-emerald-500 text-white' : 'border-stone-300 bg-white'
-              }`}
+              className="flex w-full min-h-[52px] items-center gap-3 pl-3 pr-3 py-2 text-left cursor-pointer transition-colors hover:bg-gourmand-bg/50 active:bg-gourmand-bg/80 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gourmand-chocolate"
             >
-              {filled ? <Check size={12} strokeWidth={3} aria-hidden /> : null}
+              <span
+                className={`pointer-events-none shrink-0 flex h-[26px] w-[26px] items-center justify-center rounded-full border-[1.5px] transition-colors duration-150 ${
+                  filled ? 'border-emerald-600 bg-emerald-500 text-white' : 'border-stone-300 bg-white'
+                }`}
+                aria-hidden
+              >
+                {filled ? <Check size={13} strokeWidth={3} /> : null}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-gourmand-chocolate truncate pointer-events-none">
+                  {clientName}
+                </span>
+                {i === 0 ? (
+                  <span className="mt-0.5 block text-xs text-gourmand-biscuit truncate pointer-events-none">
+                    {deliveryShort}
+                    <span className="tabular-nums"> · ×{q}</span>
+                  </span>
+                ) : (
+                  <span className="mt-0.5 block text-xs text-gourmand-biscuit tabular-nums pointer-events-none">
+                    {i + 1}/{q}
+                  </span>
+                )}
+              </span>
             </button>
-            <div className="min-w-0 flex-1 py-2">
-              <p className="text-[15px] font-semibold text-gourmand-chocolate truncate">{clientName}</p>
-              {i === 0 ? (
-                <p className="text-xs text-gourmand-biscuit truncate mt-0.5">
-                  {deliveryShort}
-                  <span className="tabular-nums"> · ×{q}</span>
-                </p>
-              ) : (
-                <p className="text-xs text-gourmand-biscuit tabular-nums mt-0.5">
-                  {i + 1}/{q}
-                </p>
-              )}
-            </div>
           </li>
         );
       })}
@@ -269,16 +281,12 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const orderedKitchen = useMemo(() => totalDessertsOrdered(commandes), [commandes]);
   const kitchenPct = orderedKitchen > 0 ? Math.round(((orderedKitchen - remainingKitchen) / orderedKitchen) * 100) : 0;
 
+  /** Ordre stable (nom) : ne pas retrier par « restant » pour éviter que les cartes sautent au clic. */
   const kitchenGroups = useMemo(() => {
     const map = kitchenLinesByDessert(commandes);
     return [...map.entries()]
       .map(([key, lines]) => ({ key, lines, ...dessertLabelForKey(key, lines) }))
-      .sort((a, b) => {
-        const remA = a.lines.reduce((s, l) => s + (l.item.quantity - clampProducedQty(l.item)), 0);
-        const remB = b.lines.reduce((s, l) => s + (l.item.quantity - clampProducedQty(l.item)), 0);
-        if (remB !== remA) return remB - remA;
-        return a.name.localeCompare(b.name, 'fr');
-      });
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   }, [commandes]);
 
   const kitchenGroupKeyList = useMemo(() => kitchenGroups.map(g => g.key), [kitchenGroups]);
@@ -728,10 +736,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
             className="px-3 space-y-3 pb-4"
           >
-            <motion.div
-              layout
-              className="gourmand-card border px-4 py-3 rounded-2xl flex items-center gap-3 min-w-0"
-            >
+            <div className="gourmand-card border px-4 py-3 rounded-2xl flex items-center gap-3 min-w-0">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gourmand-chocolate text-white">
                 <ChefHat size={20} strokeWidth={2} aria-hidden />
               </div>
@@ -746,7 +751,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
 
             {kitchenGroups.length === 0 && (
               <div className="text-center py-12 text-gourmand-biscuit">
@@ -762,7 +767,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 const done = total - remaining;
                 const expanded = kitchenExpandedKeys.has(key);
                 return (
-                  <motion.div key={key} layout className="gourmand-card border rounded-2xl overflow-hidden">
+                  <div key={key} className="gourmand-card border rounded-2xl overflow-hidden">
                     <button
                       type="button"
                       onClick={() =>
@@ -828,7 +833,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
