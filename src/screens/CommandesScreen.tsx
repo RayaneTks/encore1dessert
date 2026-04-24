@@ -252,8 +252,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const [notifPerm, setNotifPerm] = useState<ReturnType<typeof getNotificationPermission>>(getNotificationPermission);
   const [deliverTarget, setDeliverTarget] = useState<Commande | null>(null);
   const [converting, setConverting] = useState(false);
-  /** Clés de groupe dessert repliés dans l’onglet Cuisine (absent = déplié). */
-  const [kitchenCollapsedKeys, setKitchenCollapsedKeys] = useState<Set<string>>(() => new Set());
+  /** Clés de groupe dessert dépliés dans l’onglet Cuisine (par défaut : aucun = tout fermé). */
+  const [kitchenExpandedKeys, setKitchenExpandedKeys] = useState<Set<string>>(() => new Set());
 
   const filtered = useMemo(() => {
     const list = filter === 'all' ? commandes : commandes.filter(c => c.status === filter);
@@ -280,6 +280,20 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         return a.name.localeCompare(b.name, 'fr');
       });
   }, [commandes]);
+
+  const kitchenGroupKeyList = useMemo(() => kitchenGroups.map(g => g.key), [kitchenGroups]);
+
+  useEffect(() => {
+    const valid = new Set(kitchenGroupKeyList);
+    setKitchenExpandedKeys(prev => {
+      const next = new Set<string>();
+      for (const k of prev) {
+        if (valid.has(k)) next.add(k);
+      }
+      const same = prev.size === next.size && [...prev].every(k => next.has(k));
+      return same ? prev : next;
+    });
+  }, [kitchenGroupKeyList]);
 
 
   const openDetail = (cmd: Commande) => {
@@ -531,7 +545,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
           <button
             type="button"
             onClick={() => setScreenTab('commandes')}
-            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 px-2 text-sm font-semibold transition-colors duration-200 cursor-pointer border ${
+            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 px-2 text-sm font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
               screenTab === 'commandes'
                 ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
                 : 'bg-white text-gourmand-cocoa border-gourmand-border'
@@ -543,7 +557,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
           <button
             type="button"
             onClick={() => setScreenTab('cuisine')}
-            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 pl-2 pr-3 text-sm font-semibold transition-colors duration-200 cursor-pointer border ${
+            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 pl-2 pr-3 text-sm font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
               screenTab === 'cuisine'
                 ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
                 : 'bg-white text-gourmand-cocoa border-gourmand-border'
@@ -566,14 +580,19 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-2 pb-32">
         {screenTab === 'commandes' && (
-          <>
+          <motion.div
+            key="commandes-tab"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+          >
             <div className="px-2 pb-3 flex gap-1.5 overflow-x-auto scrollbar-hide">
               {(['all', 'pending', 'ready', 'delivered'] as const).map(f => (
                 <button
                   key={f}
                   type="button"
                   onClick={() => setFilter(f)}
-                  className={`px-2.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-colors duration-200 cursor-pointer shrink-0 ${
+                  className={`px-2.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all duration-200 ease-out cursor-pointer shrink-0 active:scale-95 ${
                     filter === f
                       ? 'bg-gourmand-chocolate text-white'
                       : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
@@ -629,7 +648,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className={`w-full text-left gourmand-card border p-3 cursor-pointer transition-opacity ${urgencyClass(cmd.deliveryDate, cmd.status)}`}
+                      className={`w-full text-left gourmand-card border p-3 cursor-pointer transition-all duration-200 ease-out active:scale-[0.99] ${urgencyClass(cmd.deliveryDate, cmd.status)}`}
                       onClick={() => openDetail(cmd)}
                     >
                       <div className="flex items-start gap-3 min-w-0">
@@ -698,12 +717,21 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 })}
               </AnimatePresence>
             </div>
-          </>
+          </motion.div>
         )}
 
         {screenTab === 'cuisine' && (
-          <div className="px-3 space-y-3 pb-4">
-            <div className="gourmand-card border px-4 py-3 rounded-2xl flex items-center gap-3 min-w-0">
+          <motion.div
+            key="cuisine-tab"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="px-3 space-y-3 pb-4"
+          >
+            <motion.div
+              layout
+              className="gourmand-card border px-4 py-3 rounded-2xl flex items-center gap-3 min-w-0"
+            >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gourmand-chocolate text-white">
                 <ChefHat size={20} strokeWidth={2} aria-hidden />
               </div>
@@ -718,7 +746,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
 
             {kitchenGroups.length === 0 && (
               <div className="text-center py-12 text-gourmand-biscuit">
@@ -732,25 +760,25 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 const remaining = lines.reduce((s, l) => s + (l.item.quantity - clampProducedQty(l.item)), 0);
                 const total = lines.reduce((s, l) => s + l.item.quantity, 0);
                 const done = total - remaining;
-                const expanded = !kitchenCollapsedKeys.has(key);
+                const expanded = kitchenExpandedKeys.has(key);
                 return (
-                  <div key={key} className="gourmand-card border rounded-2xl overflow-hidden">
+                  <motion.div key={key} layout className="gourmand-card border rounded-2xl overflow-hidden">
                     <button
                       type="button"
                       onClick={() =>
-                        setKitchenCollapsedKeys(prev => {
+                        setKitchenExpandedKeys(prev => {
                           const next = new Set(prev);
                           if (next.has(key)) next.delete(key);
                           else next.add(key);
                           return next;
                         })
                       }
-                      className="flex w-full items-center gap-2 min-w-0 p-3 text-left cursor-pointer transition-colors hover:bg-gourmand-bg/50 active:bg-gourmand-bg/80"
+                      className="flex w-full items-center gap-2 min-w-0 p-3 text-left cursor-pointer transition-colors duration-200 hover:bg-gourmand-bg/50 active:bg-gourmand-bg/80"
                       aria-expanded={expanded}
                     >
                       <ChevronDown
                         size={18}
-                        className={`shrink-0 text-gourmand-biscuit transition-transform duration-200 ${expanded ? 'rotate-0' : '-rotate-90'}`}
+                        className={`shrink-0 text-gourmand-biscuit transition-transform duration-200 ease-out ${expanded ? 'rotate-0' : '-rotate-90'}`}
                         aria-hidden
                       />
                       <span className="text-xl shrink-0" aria-hidden>
@@ -761,34 +789,50 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                         {done}/{total}
                       </span>
                     </button>
-                    {expanded && (
-                      <ul className="space-y-3 px-3 pb-3 pt-0 border-t border-gourmand-border/50">
-                        {lines.map(line => {
-                          const cmd = commandes.find(c => c.id === line.commandeId);
-                          if (!cmd) return null;
-                          const p = clampProducedQty(line.item);
-                          const q = line.item.quantity;
-                          return (
-                            <li key={`${line.commandeId}-${line.itemIndex}`}>
-                              <NotesChecklistUnits
-                                quantity={q}
-                                produced={p}
-                                clientName={line.clientName}
-                                deliveryShort={formatDeliveryShort(line.deliveryDate)}
-                                onChange={async n => {
-                                  await patchCommandeItem(cmd, line.itemIndex, { producedQty: n });
-                                }}
-                              />
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
+                    <AnimatePresence initial={false}>
+                      {expanded && (
+                        <motion.div
+                          key={`${key}-panel`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+                          className="overflow-hidden border-t border-gourmand-border/50"
+                        >
+                          <ul className="space-y-3 px-3 pb-3 pt-2">
+                            {lines.map((line, lineIdx) => {
+                              const cmd = commandes.find(c => c.id === line.commandeId);
+                              if (!cmd) return null;
+                              const p = clampProducedQty(line.item);
+                              const q = line.item.quantity;
+                              return (
+                                <motion.li
+                                  key={`${line.commandeId}-${line.itemIndex}`}
+                                  initial={{ opacity: 0, y: 4 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.18, delay: Math.min(lineIdx, 5) * 0.03, ease: [0.25, 0.1, 0.25, 1] }}
+                                >
+                                  <NotesChecklistUnits
+                                    quantity={q}
+                                    produced={p}
+                                    clientName={line.clientName}
+                                    deliveryShort={formatDeliveryShort(line.deliveryDate)}
+                                    onChange={async n => {
+                                      await patchCommandeItem(cmd, line.itemIndex, { producedQty: n });
+                                    }}
+                                  />
+                                </motion.li>
+                              );
+                            })}
+                          </ul>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 );
               })}
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
 
