@@ -81,9 +81,8 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
 
       <div className="px-4 space-y-4">
         <div className="min-w-0 space-y-3 pt-1">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">Filtres</h2>
-            {hasCustomFilters && (
+          {hasCustomFilters && (
+            <div className="flex justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -95,9 +94,12 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
                 <RotateCcw size={12} aria-hidden />
                 Réinitialiser
               </button>
-            )}
-          </div>
-          <FilterField label="Période">
+            </div>
+          )}
+          <FilterField
+            label="Période"
+            footer={<FilterSortByCustomer value={customerFilter} onChange={setCustomerFilter} />}
+          >
             <FilterPillRow
               options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
               value={period}
@@ -105,7 +107,6 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
               aria-label="Filtrer par période"
             />
           </FilterField>
-          <FilterSortByCustomer value={customerFilter} onChange={setCustomerFilter} />
           <p className="px-0.5 text-xs text-gourmand-biscuit/80">
             {periodLabel} · {customerLabel}
           </p>

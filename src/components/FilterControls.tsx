@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
-import { FormLabel } from './FormLabel';
 
 /** Tri / filtre client (liste déroulante) — Compta / Ordres */
 export const CUSTOMER_SORT_OPTIONS = [
@@ -112,8 +111,11 @@ export function FilterChipRow<T extends string>({
   );
 }
 
+const filterGroupLabelClass =
+  'px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit';
+
 /**
- * Liste déroulante « Trier par » — type client (défaut Tout).
+ * « Trier par » + liste compacte à droite (même hauteur de ligne que les groupes Période / Statut).
  */
 export function FilterSortByCustomer({
   value,
@@ -123,11 +125,11 @@ export function FilterSortByCustomer({
   onChange: (next: 'all' | 'particulier' | 'pro') => void;
 }) {
   return (
-    <div className="min-w-0">
-      <FormLabel>Trier par</FormLabel>
-      <div className="relative mt-1">
+    <div className="flex min-w-0 items-center gap-2 pt-0.5">
+      <span className={`${filterGroupLabelClass} shrink-0`}>Trier par</span>
+      <div className="relative ml-auto min-w-0 shrink">
         <select
-          className="gourmand-input w-full max-w-full min-w-0 cursor-pointer appearance-none pr-10 text-base font-semibold text-gourmand-chocolate"
+          className="h-9 min-h-9 w-full min-w-[7.25rem] max-w-[11rem] cursor-pointer appearance-none rounded-lg border border-gourmand-border bg-white px-2.5 pr-8 text-sm font-semibold text-gourmand-chocolate shadow-sm outline-none transition-colors focus:border-gourmand-chocolate focus:ring-1 focus:ring-gourmand-chocolate"
           value={value}
           onChange={e => onChange(e.target.value as 'all' | 'particulier' | 'pro')}
           aria-label="Trier par type de client"
@@ -138,20 +140,29 @@ export function FilterSortByCustomer({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gourmand-biscuit" aria-hidden>
-          <ChevronDown size={18} strokeWidth={2} />
+        <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gourmand-biscuit" aria-hidden>
+          <ChevronDown size={16} strokeWidth={2} />
         </div>
       </div>
     </div>
   );
 }
 
-/** Titre de groupe de filtres — identique Compta / Ordres */
-export function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+/** Titre de groupe + contenu (+ optionnel : ligne sous les pastilles, ex. tri client) */
+export function FilterField({
+  label,
+  children,
+  footer,
+}: {
+  label: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
   return (
     <div className="min-w-0 space-y-1.5">
-      <p className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">{label}</p>
+      <p className={filterGroupLabelClass}>{label}</p>
       {children}
+      {footer != null ? <div className="pt-0.5">{footer}</div> : null}
     </div>
   );
 }

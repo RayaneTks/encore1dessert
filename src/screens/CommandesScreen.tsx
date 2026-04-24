@@ -675,7 +675,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             className="min-w-0 overflow-x-hidden"
           >
             <div className="px-2 pb-2 space-y-3">
-              <FilterField label="Statut">
+              <FilterField
+                label="Statut"
+                footer={<FilterSortByCustomer value={customerFilterOrdres} onChange={setCustomerFilterOrdres} />}
+              >
                 <FilterPillRow
                   options={[
                     { value: 'all', label: 'Toutes' },
@@ -688,7 +691,6 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   aria-label="Filtrer par statut de commande"
                 />
               </FilterField>
-              <FilterSortByCustomer value={customerFilterOrdres} onChange={setCustomerFilterOrdres} />
             </div>
 
             {notifPerm === 'default' && isNotificationSupported() && (
