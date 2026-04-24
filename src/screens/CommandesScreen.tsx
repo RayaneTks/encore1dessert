@@ -20,6 +20,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
+import { FilterSegmentGrid } from '../components/FilterSegmentGrid';
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -266,6 +267,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const [deleteTarget, setDeleteTarget] = useState<Commande | null>(null);
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<CommandeStatus | 'all'>('all');
+  const [customerFilterOrdres, setCustomerFilterOrdres] = useState<'all' | 'particulier' | 'pro'>('all');
   const [notifPerm, setNotifPerm] = useState<ReturnType<typeof getNotificationPermission>>(getNotificationPermission);
   const [deliverTarget, setDeliverTarget] = useState<Commande | null>(null);
   const [converting, setConverting] = useState(false);
@@ -273,13 +275,16 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const [kitchenExpandedKeys, setKitchenExpandedKeys] = useState<Set<string>>(() => new Set());
 
   const filtered = useMemo(() => {
-    const list = filter === 'all' ? commandes : commandes.filter(c => c.status === filter);
+    let list = filter === 'all' ? commandes : commandes.filter(c => c.status === filter);
+    if (customerFilterOrdres !== 'all') {
+      list = list.filter(c => c.customerType === customerFilterOrdres);
+    }
     return [...list].sort((a, b) => {
       if (a.status === 'delivered' && b.status !== 'delivered') return 1;
       if (b.status === 'delivered' && a.status !== 'delivered') return -1;
       return a.deliveryDate.localeCompare(b.deliveryDate);
     });
-  }, [commandes, filter]);
+  }, [commandes, filter, customerFilterOrdres]);
 
   const pendingCount = useMemo(() => commandes.filter(c => c.status === 'pending').length, [commandes]);
   const remainingKitchen = useMemo(() => totalDessertsRemaining(commandes), [commandes]);
@@ -669,21 +674,42 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
             className="min-w-0 overflow-x-hidden"
           >
-            <div className="px-2 pb-3 flex gap-1.5 overflow-x-auto scrollbar-hide">
-              {(['all', 'pending', 'ready', 'delivered'] as const).map(f => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFilter(f)}
-                  className={`px-2.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all duration-200 ease-out cursor-pointer shrink-0 active:scale-95 ${
-                    filter === f
-                      ? 'bg-gourmand-chocolate text-white'
-                      : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
-                  }`}
-                >
-                  {f === 'all' ? 'Toutes' : STATUS_LABEL[f]}
-                </button>
-              ))}
+            <div className="px-2 pb-2 space-y-3">
+              <div>
+                <p className="mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                  Statut
+                </p>
+                <FilterSegmentGrid
+                  options={[
+                    { value: 'all', label: 'Toutes' },
+                    { value: 'pending', label: STATUS_LABEL.pending },
+                    { value: 'ready', label: STATUS_LABEL.ready },
+                    { value: 'delivered', label: STATUS_LABEL.delivered },
+                  ]}
+                  value={filter}
+                  onChange={setFilter}
+                  density="compact"
+                  columns={4}
+                  aria-label="Filtrer par statut de commande"
+                />
+              </div>
+              <div>
+                <p className="mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                  Client
+                </p>
+                <FilterSegmentGrid
+                  options={[
+                    { value: 'all', label: 'Tous' },
+                    { value: 'particulier', label: 'Part.' },
+                    { value: 'pro', label: 'Pro' },
+                  ]}
+                  value={customerFilterOrdres}
+                  onChange={setCustomerFilterOrdres}
+                  density="compact"
+                  columns={3}
+                  aria-label="Filtrer par type de client"
+                />
+              </div>
             </div>
 
             {notifPerm === 'default' && isNotificationSupported() && (
@@ -1175,9 +1201,18 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 )}
               </div>
 
-              <ul className="mx-auto max-w-sm space-y-2 rounded-2xl border border-gourmand-border/80 bg-gourmand-bg/30 p-3">
+              <ul className="mx-auto max-w-sm divide-y divide-gourmand-border/50 rounded-2xl border border-gourmand-border/80 bg-gourmand-bg/30 p-1">
                 {mergeCommandeItems(editing.items).map((row, idx) => (
-                  <li key={`${row.dessertId ?? row.dessertName}-${idx}`} className="flex items-center gap-3 text-left">
+                  <li
+                    key={`${row.dessertId ?? row.dessertName}-${idx}`}
+                    className="flex items-center gap-3 px-2 py-2.5 text-left first:pt-2 last:pb-2"
+                  >
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center text-xl leading-none"
+                      aria-hidden
+                    >
+                      {row.dessertEmoji || '🍰'}
+                    </span>
                     <span className="min-w-0 flex-1 text-sm font-semibold text-gourmand-chocolate">{row.dessertName}</span>
                     <span className="shrink-0 text-sm font-bold tabular-nums text-gourmand-cocoa">×{row.quantity}</span>
                   </li>

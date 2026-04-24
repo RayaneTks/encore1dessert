@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, ChevronDown, X, Settings, ChevronRight, SlidersHorizontal, CalendarDays, Users, RotateCcw } from 'lucide-react';
 import { HistoryEntry, Commande, Tab, StatPeriod } from '../types';
 import { PageHeader } from '../components/PageHeader';
+import { FilterSegmentGrid } from '../components/FilterSegmentGrid';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { fmt, fmtPct, computeGlobalStats, filterHistoryByPeriod, filterHistoryByCustomerType } from '../lib/calculations';
@@ -101,21 +102,14 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
               <CalendarDays size={12} />
               Période
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              {PERIODS.map(p => (
-                <button
-                  key={p.value}
-                  onClick={() => setPeriod(p.value)}
-                  className={`h-11 rounded-xl text-xs font-semibold transition-all border ${
-                    period === p.value
-                      ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm'
-                      : 'bg-white text-gourmand-biscuit border-gourmand-border'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            <FilterSegmentGrid
+              options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
+              value={period}
+              onChange={setPeriod}
+              density="comfortable"
+              columns={3}
+              aria-label="Filtrer par période"
+            />
           </div>
 
           <div>
@@ -123,25 +117,18 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
               <Users size={12} />
               Type client
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              {([
+            <FilterSegmentGrid
+              options={[
                 { value: 'all', label: 'Tout' },
                 { value: 'particulier', label: 'Partic.' },
                 { value: 'pro', label: 'Pro' },
-              ] as const).map(f => (
-                <button
-                  key={f.value}
-                  onClick={() => setCustomerFilter(f.value)}
-                  className={`h-11 rounded-xl text-xs font-semibold transition-all border ${
-                    customerFilter === f.value
-                      ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm'
-                      : 'bg-white text-gourmand-biscuit border-gourmand-border'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+              ]}
+              value={customerFilter}
+              onChange={setCustomerFilter}
+              density="comfortable"
+              columns={3}
+              aria-label="Filtrer par type de client"
+            />
           </div>
 
           <p className="text-xs text-gourmand-biscuit font-medium">
