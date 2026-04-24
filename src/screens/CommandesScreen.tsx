@@ -995,10 +995,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="min-w-0">
-                  <FormLabel>Commande le</FormLabel>
+                  <FormLabel>Commandée le</FormLabel>
                   <input
                     type="date"
-                    className="gourmand-input w-full text-base"
+                    className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
                     value={editing.orderDate}
                     onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
                   />
@@ -1007,7 +1007,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   <FormLabel>Livraison le</FormLabel>
                   <input
                     type="date"
-                    className="gourmand-input w-full text-base"
+                    className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
                     value={editing.deliveryDate}
                     onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
                   />
@@ -1138,9 +1138,9 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               <div className="text-center">
                 <p className="text-xl font-bold leading-tight text-gourmand-chocolate">{editing.clientName}</p>
                 <p className="mt-1.5 text-sm text-gourmand-biscuit">
-                  Livraison {formatDate(editing.deliveryDate)}
+                  Livraison le {formatDate(editing.deliveryDate)}
                   {editing.orderDate !== editing.deliveryDate && (
-                    <span className="block text-xs opacity-90">Prise le {formatDate(editing.orderDate)}</span>
+                    <span className="mt-0.5 block text-xs opacity-90">Commandée le {formatDate(editing.orderDate)}</span>
                   )}
                 </p>
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -1197,21 +1197,21 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
               {detailMoreOpen && (
                 <div className="space-y-4 border-t border-gourmand-border/60 pt-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="min-w-0">
-                      <FormLabel>Prise</FormLabel>
+                  <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+                    <div className="min-w-0 overflow-hidden">
+                      <FormLabel>Commandée le</FormLabel>
                       <input
                         type="date"
-                        className="gourmand-input w-full min-w-0 text-base"
+                        className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
                         value={editing.orderDate}
                         onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
                       />
                     </div>
-                    <div className="min-w-0">
-                      <FormLabel>Livraison</FormLabel>
+                    <div className="min-w-0 overflow-hidden">
+                      <FormLabel>Livraison le</FormLabel>
                       <input
                         type="date"
-                        className="gourmand-input w-full min-w-0 text-base"
+                        className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
                         value={editing.deliveryDate}
                         onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
                       />

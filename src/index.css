@@ -122,6 +122,13 @@ a:focus-visible {
   @apply min-h-[44px] bg-white border border-gourmand-border rounded-xl px-4 py-3 text-gourmand-chocolate font-medium focus:outline-none focus:ring-1 focus:ring-gourmand-chocolate focus:border-gourmand-chocolate transition-colors shadow-sm;
 }
 
+/* Champs date : évite le débordement en grille étroite (430px, 2 colonnes) */
+input[type='date'] {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .section-title {
   @apply text-sm font-semibold text-gourmand-cocoa ml-4 mb-4;
 }
