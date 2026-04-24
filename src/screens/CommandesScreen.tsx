@@ -33,6 +33,7 @@ import {
   mergeCommandeItems,
   normalizeCommandeItem,
   normalizeCommandeItems,
+  productionKey,
   totalDessertsOrdered,
   totalDessertsRemaining,
 } from '../lib/commandeProduction';
@@ -340,7 +341,61 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       return;
     }
     const d = desserts.find(x => x.id === dessertId);
-    if (d) setItem(idx, { dessertId: d.id, dessertName: d.name, dessertEmoji: d.emoji, producedQty: 0 });
+    if (!d) return;
+
+    setEditing(prev => {
+      const keyNew = productionKey({
+        dessertId: d.id,
+        dessertName: d.name,
+        dessertEmoji: d.emoji,
+        quantity: 1,
+      });
+      if (!keyNew) {
+        const line = normalizeCommandeItem({
+          ...prev.items[idx],
+          dessertId: d.id,
+          dessertName: d.name,
+          dessertEmoji: d.emoji,
+          producedQty: 0,
+        });
+        return { ...prev, items: prev.items.map((it, i) => (i === idx ? line : it)) };
+      }
+
+      const dupIdx = prev.items.findIndex((it, i) => {
+        if (i === idx) return false;
+        const k = productionKey(it);
+        return k === keyNew;
+      });
+
+      if (dupIdx < 0) {
+        const line = normalizeCommandeItem({
+          ...prev.items[idx],
+          dessertId: d.id,
+          dessertName: d.name,
+          dessertEmoji: d.emoji,
+          producedQty: 0,
+        });
+        return { ...prev, items: prev.items.map((it, i) => (i === idx ? line : it)) };
+      }
+
+      const cur = prev.items[idx];
+      const other = prev.items[dupIdx];
+      const totalQ = Math.max(0, Math.floor(other.quantity)) + Math.max(0, Math.floor(cur.quantity));
+      const sumP = clampProducedQty(other) + clampProducedQty(cur);
+      const merged = normalizeCommandeItem({
+        ...other,
+        dessertId: d.id,
+        dessertName: d.name,
+        dessertEmoji: d.emoji,
+        quantity: Math.max(1, totalQ),
+        producedQty: Math.min(Math.max(1, totalQ), sumP),
+      });
+
+      const next = prev.items.filter((_, i) => i !== idx && i !== dupIdx);
+      const insertAt = Math.min(idx, dupIdx);
+      next.splice(insertAt, 0, merged);
+      return { ...prev, items: next };
+    });
   };
 
   const MAX_DESSERT_LINES = 24;
@@ -1244,18 +1299,18 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                       {editing.items.map((item, idx) => (
                         <div
                           key={idx}
-                          className="flex flex-wrap items-center gap-2 rounded-xl border border-gourmand-border bg-white p-2.5"
+                          className="flex items-center gap-2 rounded-xl border border-gourmand-border bg-gourmand-bg/25 px-2 py-1.5"
                         >
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center text-xl" aria-hidden>
+                          <span className="flex w-9 shrink-0 justify-center text-lg leading-none" aria-hidden>
                             {item.dessertEmoji || '🍰'}
                           </span>
                           <select
-                            className="gourmand-input min-h-11 min-w-[8rem] flex-1 basis-[60%] text-base sm:basis-auto"
+                            className="gourmand-input min-h-11 min-w-0 flex-1 py-2 text-sm"
                             value={item.dessertId || ''}
                             onChange={e => handleDessertChange(idx, e.target.value)}
                             disabled={editing.status !== 'pending'}
                           >
-                            <option value="">—</option>
+                            <option value="">— Dessert —</option>
                             {desserts.map(d => (
                               <option key={d.id} value={d.id}>
                                 {d.emoji} {d.name}
@@ -1267,7 +1322,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                             min={1}
                             max={999}
                             disabled={editing.status !== 'pending'}
-                            className="gourmand-input h-11 w-[4.25rem] shrink-0 text-center text-base disabled:opacity-50"
+                            className="gourmand-input h-11 w-14 shrink-0 px-1 text-center text-sm tabular-nums disabled:opacity-50"
                             value={item.quantity}
                             onChange={e =>
                               setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })
@@ -1277,10 +1332,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                             <button
                               type="button"
                               onClick={() => removeItem(idx)}
-                              className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-red-400 hover:bg-red-50 sm:ml-0"
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-red-400 hover:bg-red-50/80"
                               aria-label="Supprimer la ligne"
                             >
-                              <Trash2 size={18} strokeWidth={2} />
+                              <Trash2 size={17} strokeWidth={2} />
                             </button>
                           )}
                         </div>
