@@ -12,9 +12,6 @@ import {
   X,
   ChefHat,
   ClipboardList,
-  Info,
-  ChevronLeft,
-  Cake,
 } from 'lucide-react';
 import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert } from '../types';
 import { PageHeader } from '../components/PageHeader';
@@ -32,7 +29,6 @@ import {
   commandeProductionComplete,
   dessertLabelForKey,
   kitchenLinesByDessert,
-  KITCHEN_UNIT_CIRCLES_MAX,
   mergeCommandeItems,
   normalizeCommandeItem,
   normalizeCommandeItems,
@@ -103,7 +99,7 @@ function formatDate(iso: string) {
 
 function itemsSummary(items: CommandeItem[]): string {
   const merged = mergeCommandeItems(items);
-  const parts = merged.map(i => `${i.quantity}× ${i.dessertName}`);
+  const parts = merged.map(i => `${i.dessertEmoji ? `${i.dessertEmoji} ` : ''}${i.quantity}× ${i.dessertName}`);
   if (parts.length === 0) return '–';
   if (parts.length <= 2) return parts.join(', ');
   return `${parts.slice(0, 2).join(', ')} +${parts.length - 2}`;
@@ -127,7 +123,7 @@ function nextProducedTap(i: number, produced: number, quantity: number): number 
 
 const todayISO = new Date().toISOString().split('T')[0];
 
-const BLANK_ITEM: CommandeItem = { dessertId: null, dessertName: '', dessertEmoji: '', quantity: 1, producedQty: 0 };
+const BLANK_ITEM: CommandeItem = { dessertId: null, dessertName: '', dessertEmoji: '🍰', quantity: 1, producedQty: 0 };
 
 const BLANK: Commande = {
   id: 'cmd-new',
@@ -142,83 +138,98 @@ const BLANK: Commande = {
   createdAt: '',
 };
 
-function ProductionControl({
+const NOTES_CHECKLIST_MAX_ROWS = 20;
+
+/** Checklist type Rappels : une ligne par unité, rond à gauche, infos à droite. */
+function NotesChecklistUnits({
   quantity,
   produced,
   onChange,
   disabled,
+  emoji,
+  dessertName,
+  clientLine,
 }: {
   quantity: number;
   produced: number;
   onChange: (n: number) => void;
   disabled?: boolean;
+  emoji: string;
+  dessertName: string;
+  clientLine: string;
 }) {
   const q = Math.max(0, Math.floor(quantity));
   const p = Math.min(q, Math.max(0, Math.floor(produced)));
   if (q === 0) return null;
 
-  if (q > KITCHEN_UNIT_CIRCLES_MAX) {
+  if (q > NOTES_CHECKLIST_MAX_ROWS) {
     return (
-      <div className="flex flex-wrap items-center gap-3 min-w-0" role="group" aria-label={`Production ${p} sur ${q} unités`}>
-        <div className="flex items-center gap-1 rounded-xl border border-gourmand-border bg-white p-1">
-          <button
-            type="button"
-            disabled={disabled || p <= 0}
-            onClick={() => onChange(Math.max(0, p - 1))}
-            className="min-h-11 min-w-11 rounded-lg text-lg font-semibold text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-            aria-label="Retirer une unité fabriquée"
-          >
-            −
-          </button>
-          <span className="min-w-[4.5rem] text-center text-sm font-bold tabular-nums text-gourmand-chocolate px-1">
-            {p} / {q}
-          </span>
-          <button
-            type="button"
-            disabled={disabled || p >= q}
-            onClick={() => onChange(Math.min(q, p + 1))}
-            className="min-h-11 min-w-11 rounded-lg text-lg font-semibold text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-            aria-label="Ajouter une unité fabriquée"
-          >
-            +
-          </button>
-        </div>
-        <p className="text-xs text-gourmand-biscuit max-w-[14rem] leading-snug">
-          Grande quantité : utilise les boutons pour indiquer combien sont prêts.
-        </p>
+      <div className="flex items-center gap-2 rounded-lg border border-gourmand-border bg-white px-2 py-1.5" role="group">
+        <button
+          type="button"
+          disabled={disabled || p <= 0}
+          onClick={() => onChange(Math.max(0, p - 1))}
+          className="min-h-11 min-w-11 rounded-lg text-lg font-medium text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+          aria-label="Moins une unité prête"
+        >
+          −
+        </button>
+        <span className="flex-1 text-center text-sm font-semibold tabular-nums text-gourmand-chocolate">{p}/{q}</span>
+        <button
+          type="button"
+          disabled={disabled || p >= q}
+          onClick={() => onChange(Math.min(q, p + 1))}
+          className="min-h-11 min-w-11 rounded-lg text-lg font-medium text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+          aria-label="Plus une unité prête"
+        >
+          +
+        </button>
       </div>
     );
   }
 
   return (
-    <div
-      className="flex flex-wrap gap-2 w-full min-w-0"
-      role="group"
-      aria-label={`${p} sur ${q} unités indiquées comme fabriquées`}
+    <ul
+      className="overflow-hidden rounded-xl border border-gourmand-border/80 bg-white divide-y divide-gourmand-border/50"
+      role="list"
+      aria-label={`${p} sur ${q} prêts`}
     >
       {Array.from({ length: q }, (_, i) => {
         const filled = i < p;
         return (
-          <button
-            key={i}
-            type="button"
-            disabled={disabled}
-            aria-pressed={filled}
-            aria-label={
-              filled ? `Réduire la progression après ${i} unité(s)` : `Marquer ${i + 1} unité(s) comme faites`
-            }
-            onClick={() => onChange(nextProducedTap(i, p, q))}
-            className={`h-10 w-10 shrink-0 rounded-full border-2 transition-colors duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gourmand-chocolate ${
-              filled
-                ? 'border-emerald-600 bg-emerald-500 text-white shadow-sm'
-                : 'border-gourmand-border bg-white text-transparent hover:border-gourmand-cocoa/40'
-            }`}
-          >
-            {filled ? <Check size={16} className="mx-auto" strokeWidth={2.5} aria-hidden /> : null}
-          </button>
+          <li key={i} className="flex items-center gap-3 min-h-[48px] pl-3 pr-2">
+            <button
+              type="button"
+              disabled={disabled}
+              aria-pressed={filled}
+              aria-label={filled ? `Décocher après l’unité ${i + 1}` : `Cocher jusqu’à l’unité ${i + 1}`}
+              onClick={() => onChange(nextProducedTap(i, p, q))}
+              className={`shrink-0 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gourmand-chocolate ${
+                filled ? 'border-emerald-600 bg-emerald-500 text-white' : 'border-stone-300 bg-white'
+              }`}
+            >
+              {filled ? <Check size={12} strokeWidth={3} aria-hidden /> : null}
+            </button>
+            <div className="min-w-0 flex-1 py-2">
+              {i === 0 ? (
+                <>
+                  <p className="text-[15px] font-medium leading-snug text-gourmand-chocolate">
+                    <span className="mr-1.5" aria-hidden>
+                      {emoji}
+                    </span>
+                    {dessertName}
+                    <span className="text-gourmand-biscuit font-normal tabular-nums"> · ×{q}</span>
+                  </p>
+                  {clientLine ? <p className="text-xs text-gourmand-biscuit truncate mt-0.5">{clientLine}</p> : null}
+                </>
+              ) : (
+                <p className="text-[13px] text-gourmand-biscuit/50 tabular-nums">{i + 1}/{q}</p>
+              )}
+            </div>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
 
@@ -226,8 +237,6 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const [screenTab, setScreenTab] = useState<ScreenTab>('commandes');
   const [formOpen, setFormOpen] = useState(false);
   const [detailCommand, setDetailCommand] = useState<Commande | null>(null);
-  /** null = vue résumé ; desserts = édition lignes ; infos = client / dates / notes / rappels */
-  const [detailPanel, setDetailPanel] = useState<'desserts' | 'infos' | null>(null);
   const [editing, setEditing] = useState<Commande>(BLANK);
   const [deleteTarget, setDeleteTarget] = useState<Commande | null>(null);
   const [saving, setSaving] = useState(false);
@@ -264,8 +273,9 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
 
   const openDetail = (cmd: Commande) => {
-    setDetailPanel(null);
-    setDetailCommand({ ...cmd, items: normalizeCommandeItems(cmd.items.map(i => ({ ...i }))) });
+    const normalized = normalizeCommandeItems(cmd.items.map(i => ({ ...i })));
+    setDetailCommand({ ...cmd, items: normalized });
+    setEditing({ ...cmd, items: normalized.length ? normalized.map(i => ({ ...i })) : [{ ...BLANK_ITEM }] });
   };
 
   const openNewCommandForm = () => {
@@ -273,36 +283,14 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
     setFormOpen(true);
   };
 
-  const openEditDessertsPanel = () => {
-    if (!detailCommand) return;
-    setEditing({
-      ...detailCommand,
-      items: detailCommand.items.length ? detailCommand.items.map(i => ({ ...i })) : [{ ...BLANK_ITEM }],
-    });
-    setDetailPanel('desserts');
-  };
-
-  const openInfosPanel = () => {
-    if (!detailCommand) return;
-    setEditing({ ...detailCommand, items: detailCommand.items.map(i => ({ ...i })) });
-    setDetailPanel('infos');
-  };
-
-  const detailMergedItems = useMemo(
-    () => (detailCommand ? mergeCommandeItems(detailCommand.items) : []),
-    [detailCommand],
-  );
-
   useEffect(() => {
     const id = detailCommand?.id;
-    if (!id || detailPanel !== null) return;
+    if (!id) return;
     const fresh = commandes.find(c => c.id === id);
     if (!fresh) return;
-    setDetailCommand({
-      ...fresh,
-      items: normalizeCommandeItems(fresh.items.map(i => ({ ...i }))),
-    });
-  }, [commandes, detailCommand?.id, detailPanel]);
+    const normalized = normalizeCommandeItems(fresh.items.map(i => ({ ...i })));
+    setDetailCommand(prev => (prev && prev.id === id ? { ...fresh, items: normalized } : prev));
+  }, [commandes, detailCommand?.id]);
 
   const setItem = (idx: number, patch: Partial<CommandeItem>) => {
     setEditing(prev => {
@@ -313,7 +301,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
 
   const handleDessertChange = (idx: number, dessertId: string) => {
     if (!dessertId) {
-      setItem(idx, { dessertId: null, dessertName: '', dessertEmoji: '', producedQty: 0 });
+      setItem(idx, { dessertId: null, dessertName: '', dessertEmoji: '🍰', producedQty: 0 });
       return;
     }
     const d = desserts.find(x => x.id === dessertId);
@@ -403,28 +391,15 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
     }
   };
 
-  const handleSaveDetailDesserts = async () => {
-    if (!detailCommand) return;
-    const validItems = editing.items.filter(i => i.dessertName.trim());
-    if (validItems.length === 0) {
-      showToast('Au moins un dessert requis', 'error');
-      return;
-    }
-    setSaving(true);
-    try {
-      const merged = mergeCommandeItems(validItems);
-      await persistCommande({ ...detailCommand, items: merged }, 'Desserts enregistrés ✓');
-      setDetailCommand({ ...detailCommand, items: merged });
-      setDetailPanel(null);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveDetailInfos = async () => {
+  const handleSaveDetailCommand = async () => {
     if (!detailCommand) return;
     if (!editing.clientName.trim()) {
       showToast('Nom du client requis', 'error');
+      return;
+    }
+    const validItems = editing.items.filter(i => i.dessertName.trim());
+    if (validItems.length === 0) {
+      showToast('Au moins un dessert requis', 'error');
       return;
     }
     if (!editing.deliveryDate) {
@@ -432,60 +407,49 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       return;
     }
     let nextStatus = editing.status;
-    if (nextStatus === 'ready' && !commandeProductionComplete(detailCommand)) {
-      showToast('Valide toute la production dans l’onglet Cuisine avant « Prête ».', 'error');
+    const mergedItems = mergeCommandeItems(validItems);
+    if (nextStatus === 'ready' && !commandeProductionComplete({ ...detailCommand, items: mergedItems })) {
+      showToast('Cuisine : tout cocher avant « Prête ».', 'error');
       nextStatus = 'pending';
     }
     setSaving(true);
     try {
-      await persistCommande(
-        {
-          ...detailCommand,
-          clientName: editing.clientName.trim(),
-          orderDate: editing.orderDate,
-          deliveryDate: editing.deliveryDate,
-          notes: editing.notes,
-          customerType: editing.customerType,
-          notifyBefore: editing.notifyBefore,
-          status: nextStatus,
-        },
-        'Informations enregistrées ✓',
-      );
-      setDetailCommand(prev =>
-        prev
-          ? {
-              ...prev,
-              clientName: editing.clientName.trim(),
-              orderDate: editing.orderDate,
-              deliveryDate: editing.deliveryDate,
-              notes: editing.notes,
-              customerType: editing.customerType,
-              notifyBefore: editing.notifyBefore,
-              status: nextStatus,
-            }
-          : prev,
-      );
-      setDetailPanel(null);
+      const saved = {
+        ...detailCommand,
+        clientName: editing.clientName.trim(),
+        orderDate: editing.orderDate,
+        deliveryDate: editing.deliveryDate,
+        notes: editing.notes,
+        customerType: editing.customerType,
+        notifyBefore: editing.notifyBefore,
+        status: nextStatus,
+        items: mergedItems,
+      };
+      await persistCommande(saved, 'Enregistré ✓');
+      setDetailCommand({ ...saved, items: mergedItems.map(i => ({ ...i })) });
+      setEditing({ ...saved, items: mergedItems.map(i => ({ ...i })) });
     } finally {
       setSaving(false);
     }
   };
 
   const handleAdvanceStatus = async (cmd: Commande) => {
-    const next = STATUS_NEXT[cmd.status];
+    const live = commandes.find(c => c.id === cmd.id) ?? cmd;
+    const next = STATUS_NEXT[live.status];
     if (!next) return;
     if (next === 'ready') {
-      if (!commandeProductionComplete(cmd)) {
-        showToast('Termine la production en cuisine (tous les desserts) avant de marquer la commande prête.', 'error');
+      if (!commandeProductionComplete(live)) {
+        showToast('Cuisine : tout cocher d’abord.', 'error');
         setScreenTab('cuisine');
         return;
       }
-      await persistCommande({ ...cmd, status: next }, `${STATUS_LABEL[next]} ✓`);
-      setDetailCommand(prev => (prev && prev.id === cmd.id ? { ...prev, status: 'ready' } : prev));
+      await persistCommande({ ...live, status: next }, `${STATUS_LABEL[next]} ✓`);
+      setDetailCommand(prev => (prev && prev.id === live.id ? { ...prev, status: 'ready' } : prev));
+      setEditing(prev => (prev.id === live.id ? { ...prev, status: 'ready' } : prev));
       return;
     }
     if (next === 'delivered') {
-      setDeliverTarget(cmd);
+      setDeliverTarget(live);
     }
   };
 
@@ -540,8 +504,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
           title="Ordres"
           description={
             orderedKitchen > 0
-              ? `${pendingCount} commande(s) en attente · ${commandes.length} au total · ${remainingKitchen} dessert(s) restant(s) en cuisine`
-              : `${pendingCount} en attente · ${commandes.length} commande(s)`
+              ? `${pendingCount} attente · ${commandes.length} total · ${remainingKitchen} restant cuisine`
+              : `${pendingCount} attente · ${commandes.length} total`
           }
           action={
             <IconActionButton
@@ -613,9 +577,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
             {notifPerm === 'default' && isNotificationSupported() && (
               <div className="mx-2 mb-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 flex flex-wrap items-center gap-2 sm:flex-nowrap">
                 <Bell size={16} className="text-amber-600 shrink-0" aria-hidden />
-                <p className="text-xs text-amber-800 font-medium flex-1 min-w-0">
-                  Autorise les notifications pour les rappels de commandes
-                </p>
+                <p className="text-xs text-amber-800 font-medium flex-1 min-w-0">Rappels commandes</p>
                 <button
                   type="button"
                   onClick={handleRequestPerm}
@@ -629,9 +591,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               <div className="mx-2 mb-3 p-3 rounded-2xl bg-red-50 border border-red-200">
                 <div className="flex gap-2 items-start">
                   <BellOff size={16} className="text-red-500 shrink-0 mt-0.5" aria-hidden />
-                  <p className="text-xs text-red-700 font-medium">
-                    Notifications bloquées. Autorise dans Réglages &gt; Safari &gt; Notifications.
-                  </p>
+                  <p className="text-xs text-red-700 font-medium">Notifications bloquées (Réglages → Safari).</p>
                 </div>
               </div>
             )}
@@ -641,7 +601,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 <div className="text-center py-16 text-gourmand-biscuit">
                   <Package size={40} className="mx-auto mb-3 opacity-30" aria-hidden />
                   <p className="text-sm font-medium">Aucune commande</p>
-                  <p className="text-xs opacity-60 mt-1">Appuie sur + pour en ajouter une</p>
+                  <p className="text-xs opacity-60 mt-1">+ pour ajouter</p>
                 </div>
               )}
 
@@ -663,11 +623,15 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                       onClick={() => openDetail(cmd)}
                     >
                       <div className="flex items-start gap-3 min-w-0">
-                        <div
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gourmand-border bg-gourmand-bg text-gourmand-cocoa"
-                          aria-hidden
-                        >
-                          <Cake size={20} strokeWidth={2} />
+                        <div className="flex flex-col items-center gap-0.5 shrink-0 w-9 pt-0.5" aria-hidden>
+                          {cmd.items.slice(0, 2).map((it, i) => (
+                            <span key={i} className="text-xl leading-none">
+                              {it.dessertEmoji || '🍰'}
+                            </span>
+                          ))}
+                          {cmd.items.length > 2 && (
+                            <span className="text-[9px] font-bold text-gourmand-biscuit">+{cmd.items.length - 2}</span>
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0 overflow-hidden">
@@ -728,84 +692,62 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         )}
 
         {screenTab === 'cuisine' && (
-          <div className="px-3 space-y-4 pb-4">
-            <div className="gourmand-card border p-4 rounded-2xl">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gourmand-chocolate text-white">
-                  <ChefHat size={24} strokeWidth={2} aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-bold text-gourmand-chocolate">Aujourd’hui en cuisine</h2>
-                  <p className="mt-2 text-3xl font-bold tabular-nums text-gourmand-chocolate leading-none">
-                    {Math.max(0, orderedKitchen - remainingKitchen)}
-                    <span className="text-gourmand-biscuit text-lg font-semibold"> / {orderedKitchen}</span>
-                  </p>
-                  <p className="text-sm text-gourmand-cocoa mt-2 leading-snug">
-                    {remainingKitchen === 0 && orderedKitchen > 0
-                      ? 'Toutes les unités sont marquées comme prêtes.'
-                      : remainingKitchen > 0
-                        ? `Encore ${remainingKitchen} unité(s) à marquer sur les commandes en attente.`
-                        : 'Aucune commande en attente avec desserts.'}
-                  </p>
-                </div>
+          <div className="px-3 space-y-3 pb-4">
+            <div className="gourmand-card border px-4 py-3 rounded-2xl flex items-center gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gourmand-chocolate text-white">
+                <ChefHat size={20} strokeWidth={2} aria-hidden />
               </div>
-              {orderedKitchen > 0 && (
-                <div
-                  className="mt-4"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={kitchenPct}
-                  aria-label="Progression de la production cuisine"
-                >
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-gourmand-bg">
-                    <div
-                      className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 ease-out"
-                      style={{ width: `${kitchenPct}%` }}
-                    />
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-bold tabular-nums text-gourmand-chocolate leading-tight">
+                  {Math.max(0, orderedKitchen - remainingKitchen)}
+                  <span className="text-gourmand-biscuit text-sm font-semibold"> / {orderedKitchen}</span>
+                </p>
+                {orderedKitchen > 0 && (
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gourmand-bg" role="progressbar" aria-valuenow={kitchenPct} aria-valuemin={0} aria-valuemax={100}>
+                    <div className="h-full rounded-full bg-emerald-600 transition-[width] duration-200" style={{ width: `${kitchenPct}%` }} />
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {kitchenGroups.length === 0 && (
-              <div className="text-center py-14 text-gourmand-biscuit px-2">
-                <ChefHat size={40} className="mx-auto mb-3 opacity-20" aria-hidden />
-                <p className="text-base font-semibold text-gourmand-cocoa">Rien à produire</p>
-                <p className="text-sm opacity-80 mt-2 max-w-sm mx-auto leading-relaxed">
-                  Les desserts des commandes « En attente » s’affichent ici, regroupés par recette.
-                </p>
+              <div className="text-center py-12 text-gourmand-biscuit">
+                <ChefHat size={36} className="mx-auto mb-2 opacity-25" aria-hidden />
+                <p className="text-sm font-medium text-gourmand-cocoa">Rien en attente</p>
               </div>
             )}
 
-            <div className="space-y-4">
-              {kitchenGroups.map(({ key, lines, name }) => {
+            <div className="space-y-3">
+              {kitchenGroups.map(({ key, lines, name, emoji }) => {
                 const remaining = lines.reduce((s, l) => s + (l.item.quantity - clampProducedQty(l.item)), 0);
                 const total = lines.reduce((s, l) => s + l.item.quantity, 0);
                 const done = total - remaining;
                 return (
-                  <div key={key} className="gourmand-card border p-4 rounded-2xl space-y-4">
-                    <div className="flex items-center justify-between gap-2 min-w-0 border-b border-gourmand-border/70 pb-3">
-                      <h3 className="text-base font-bold text-gourmand-chocolate truncate">{name}</h3>
-                      <p className="text-xs font-semibold tabular-nums text-gourmand-biscuit shrink-0">
-                        {done}/{total} · {remaining} restant{remaining > 1 ? 's' : ''}
-                      </p>
+                  <div key={key} className="gourmand-card border p-3 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2 min-w-0 pb-2 border-b border-gourmand-border/60">
+                      <span className="text-xl shrink-0" aria-hidden>
+                        {emoji}
+                      </span>
+                      <h3 className="text-[15px] font-bold text-gourmand-chocolate truncate flex-1">{name}</h3>
+                      <span className="text-xs font-semibold tabular-nums text-gourmand-biscuit shrink-0">
+                        {done}/{total}
+                      </span>
                     </div>
-                    <ul className="space-y-5">
+                    <ul className="space-y-4">
                       {lines.map(line => {
                         const cmd = commandes.find(c => c.id === line.commandeId);
                         if (!cmd) return null;
                         const p = clampProducedQty(line.item);
                         const q = line.item.quantity;
+                        const clientLine = `${line.clientName} · ${formatDate(line.deliveryDate)}`;
                         return (
-                          <li key={`${line.commandeId}-${line.itemIndex}`} className="space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
-                              <p className="text-sm font-semibold text-gourmand-chocolate truncate">{line.clientName}</p>
-                              <p className="text-xs text-gourmand-biscuit shrink-0 tabular-nums">{formatDate(line.deliveryDate)}</p>
-                            </div>
-                            <ProductionControl
+                          <li key={`${line.commandeId}-${line.itemIndex}`}>
+                            <NotesChecklistUnits
                               quantity={q}
                               produced={p}
+                              emoji={line.item.dessertEmoji || emoji}
+                              dessertName={name}
+                              clientLine={clientLine}
                               onChange={async n => {
                                 await patchCommandeItem(cmd, line.itemIndex, { producedQty: n });
                               }}
@@ -826,10 +768,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
       <AnimatePresence>
         {formOpen && (
           <Modal title="Nouvelle commande" onClose={() => setFormOpen(false)}>
-            <div className="p-5 space-y-5 max-h-[min(85vh,32rem)] overflow-y-auto scrollbar-hide">
-              <p className="text-sm text-gourmand-cocoa leading-relaxed">
-                Saisis le client, les dates et les desserts. Les doublons du même dessert seront fusionnés en une seule ligne à l’enregistrement.
-              </p>
+            <div className="p-5 space-y-4 max-h-[min(85vh,32rem)] overflow-y-auto scrollbar-hide">
               <div>
                 <FormLabel>Nom du client</FormLabel>
                 <input
@@ -854,18 +793,18 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 <div className="space-y-3">
                   {editing.items.map((item, idx) => (
                     <div key={idx} className="flex flex-wrap items-stretch gap-2 min-w-0 rounded-xl border border-gourmand-border bg-gourmand-bg/30 p-2">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gourmand-border bg-white text-gourmand-cocoa">
-                        <Cake size={20} strokeWidth={2} aria-hidden />
-                      </div>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center text-2xl leading-none" aria-hidden>
+                        {item.dessertEmoji || '🍰'}
+                      </span>
                       <select
                         className="gourmand-input flex-1 min-w-0 text-base py-2"
                         value={item.dessertId || ''}
                         onChange={e => handleDessertChange(idx, e.target.value)}
                       >
-                        <option value="">Choisir un dessert</option>
+                        <option value="">—</option>
                         {desserts.map(d => (
                           <option key={d.id} value={d.id}>
-                            {d.name}
+                            {d.emoji} {d.name}
                           </option>
                         ))}
                       </select>
@@ -972,12 +911,6 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                     </button>
                   ))}
                 </div>
-                {notifPerm === 'unsupported' && (
-                  <p className="text-xs text-gourmand-biscuit/60 mt-2">Notifications non supportées sur cet appareil.</p>
-                )}
-                {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
-                  <p className="text-xs text-gourmand-biscuit/60 mt-2">Rappels à 8h le jour choisi.</p>
-                )}
               </div>
 
               <div>
@@ -1004,331 +937,226 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         )}
       </AnimatePresence>
 
-      {/* Détail commande */}
+      {/* Détail commande — une seule vue scrollable */}
       <AnimatePresence>
         {detailCommand && (
-          <Modal
-            title={
-              detailPanel === 'desserts'
-                ? 'Desserts'
-                : detailPanel === 'infos'
-                  ? 'Informations'
-                  : detailCommand.clientName
-            }
-            onClose={() => {
-              setDetailCommand(null);
-              setDetailPanel(null);
-            }}
-          >
-            <div className="p-5 max-h-[min(88vh,40rem)] overflow-y-auto scrollbar-hide space-y-5">
-              {detailPanel === 'desserts' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setDetailPanel(null)}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-gourmand-chocolate cursor-pointer py-1 -mt-1"
-                  >
-                    <ChevronLeft size={18} aria-hidden />
-                    Retour
-                  </button>
-                  <p className="text-sm text-gourmand-cocoa leading-relaxed">
-                    Les lignes identiques (même dessert) seront fusionnées à l’enregistrement. Quantité max. 999 par ligne.
-                  </p>
-                  <div className="space-y-3">
-                    {editing.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex flex-wrap items-stretch gap-2 min-w-0 rounded-xl border border-gourmand-border bg-gourmand-bg/30 p-2"
-                      >
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gourmand-border bg-white text-gourmand-cocoa">
-                          <Cake size={20} strokeWidth={2} aria-hidden />
-                        </div>
-                        <select
-                          className="gourmand-input flex-1 min-w-0 text-base py-2"
-                          value={item.dessertId || ''}
-                          onChange={e => handleDessertChange(idx, e.target.value)}
-                          disabled={detailCommand.status !== 'pending'}
-                        >
-                          <option value="">Choisir un dessert</option>
-                          {desserts.map(d => (
-                            <option key={d.id} value={d.id}>
-                              {d.name}
-                            </option>
-                          ))}
-                        </select>
-                        <label className="sr-only" htmlFor={`edit-qty-${idx}`}>
-                          Quantité
-                        </label>
-                        <input
-                          id={`edit-qty-${idx}`}
-                          type="number"
-                          min={1}
-                          max={999}
-                          disabled={detailCommand.status !== 'pending'}
-                          className="gourmand-input w-[4.5rem] shrink-0 text-center text-base py-2 disabled:opacity-50"
-                          value={item.quantity}
-                          onChange={e =>
-                            setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })
-                          }
-                        />
-                        {editing.items.length > 1 && detailCommand.status === 'pending' && (
-                          <button
-                            type="button"
-                            onClick={() => removeItem(idx)}
-                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-red-100 text-red-500 hover:bg-red-50 cursor-pointer"
-                            aria-label="Retirer cette ligne"
-                          >
-                            <X size={18} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {detailCommand.status === 'pending' && (
-                    <button
-                      type="button"
-                      onClick={addItem}
-                      className="w-full min-h-11 rounded-xl border border-dashed border-gourmand-border text-sm font-semibold text-gourmand-chocolate hover:bg-gourmand-bg cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Plus size={18} /> Ajouter une ligne
+          <Modal title={editing.clientName || 'Commande'} onClose={() => setDetailCommand(null)}>
+            <div className="p-4 max-h-[min(88vh,42rem)] overflow-y-auto scrollbar-hide space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`gourmand-chip ${
+                    editing.customerType === 'pro'
+                      ? 'bg-gourmand-chocolate text-white'
+                      : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
+                  }`}
+                >
+                  {editing.customerType === 'pro' ? 'Pro' : 'Part.'}
+                </span>
+                <span
+                  className={`gourmand-chip ${
+                    editing.status === 'pending'
+                      ? 'bg-amber-100 text-amber-800'
+                      : editing.status === 'ready'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-emerald-100 text-emerald-700'
+                  }`}
+                >
+                  {STATUS_LABEL[editing.status]}
+                </span>
+                {editing.status === 'pending' && (
+                  <span className="text-xs font-medium tabular-nums text-gourmand-biscuit ml-auto">
+                    cuisine {producedPieces(detailCommand.items)}/{totalPieces(detailCommand.items)}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <FormLabel>Prise</FormLabel>
+                  <input
+                    type="date"
+                    className="gourmand-input w-full text-sm py-2"
+                    value={editing.orderDate}
+                    onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <FormLabel>Livraison</FormLabel>
+                  <input
+                    type="date"
+                    className="gourmand-input w-full text-sm py-2"
+                    value={editing.deliveryDate}
+                    onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <FormLabel>Client</FormLabel>
+                <input
+                  className="gourmand-input w-full text-base py-2.5"
+                  value={editing.clientName}
+                  onChange={e => setEditing(prev => ({ ...prev, clientName: e.target.value }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
+                  className={`gourmand-segment-compact min-h-11 cursor-pointer text-sm ${
+                    editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
+                  }`}
+                >
+                  Particulier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
+                  className={`gourmand-segment-compact min-h-11 cursor-pointer text-sm ${
+                    editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
+                  }`}
+                >
+                  Pro
+                </button>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Bell size={14} className="text-gourmand-biscuit shrink-0" aria-hidden />
+                  <span className="text-xs font-semibold text-gourmand-biscuit">Rappels</span>
+                  {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
+                    <button type="button" onClick={handleRequestPerm} className="ml-auto text-xs font-semibold text-gourmand-chocolate underline cursor-pointer">
+                      {notifPerm === 'denied' ? 'Bloqué' : 'Activer'}
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveDetailDesserts()}
-                    disabled={saving || detailCommand.status !== 'pending'}
-                    className="gourmand-btn-primary w-full cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {saving ? 'Enregistrement…' : 'Enregistrer les desserts'}
-                  </button>
-                </>
-              )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {NOTIFY_OPTIONS.map(opt => (
+                    <button
+                      type="button"
+                      key={opt.value}
+                      onClick={() => toggleNotify(opt.value)}
+                      disabled={notifPerm === 'denied' || notifPerm === 'unsupported'}
+                      className={`min-h-9 px-2.5 rounded-lg text-[11px] font-semibold border cursor-pointer disabled:opacity-40 ${
+                        editing.notifyBefore.includes(opt.value)
+                          ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
+                          : 'bg-white text-gourmand-biscuit border-gourmand-border'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              {detailPanel === 'infos' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setDetailPanel(null)}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-gourmand-chocolate cursor-pointer py-1 -mt-1"
-                  >
-                    <ChevronLeft size={18} aria-hidden />
-                    Retour
-                  </button>
-                  <div>
-                    <FormLabel>Nom du client</FormLabel>
-                    <input
-                      className="gourmand-input w-full text-base"
-                      value={editing.clientName}
-                      onChange={e => setEditing(prev => ({ ...prev, clientName: e.target.value }))}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <FormLabel>Commande le</FormLabel>
-                      <input
-                        type="date"
-                        className="gourmand-input w-full text-base"
-                        value={editing.orderDate}
-                        onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <FormLabel>Livraison le</FormLabel>
-                      <input
-                        type="date"
-                        className="gourmand-input w-full text-base"
-                        value={editing.deliveryDate}
-                        onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <FormLabel>Type client</FormLabel>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
-                        className={`gourmand-segment-compact min-h-11 cursor-pointer ${
-                          editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                        }`}
+              <div>
+                <FormLabel>Statut</FormLabel>
+                <select
+                  className="gourmand-input w-full text-base py-2.5"
+                  value={editing.status}
+                  onChange={e => setEditing(prev => ({ ...prev, status: e.target.value as CommandeStatus }))}
+                >
+                  <option value="pending">En attente</option>
+                  <option value="ready">Prête</option>
+                  <option value="delivered">Livrée</option>
+                </select>
+              </div>
+
+              <div>
+                <FormLabel>Notes</FormLabel>
+                <textarea
+                  className="gourmand-input w-full resize-none min-h-[72px] text-sm py-2"
+                  rows={2}
+                  value={editing.notes}
+                  onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+
+              <div className="border-t border-gourmand-border/70 pt-3 space-y-2">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Desserts</span>
+                  {editing.status === 'pending' && (
+                    <button type="button" onClick={addItem} className="text-xs font-semibold text-gourmand-chocolate cursor-pointer flex items-center gap-0.5">
+                      <Plus size={14} /> ligne
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {editing.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 min-w-0 rounded-lg border border-gourmand-border bg-gourmand-bg/20 pl-2 pr-1 py-1">
+                      <span className="text-lg shrink-0 w-8 text-center" aria-hidden>
+                        {item.dessertEmoji || '🍰'}
+                      </span>
+                      <select
+                        className="gourmand-input flex-1 min-w-0 text-sm py-2"
+                        value={item.dessertId || ''}
+                        onChange={e => handleDessertChange(idx, e.target.value)}
+                        disabled={editing.status !== 'pending'}
                       >
-                        Particulier
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
-                        className={`gourmand-segment-compact min-h-11 cursor-pointer ${
-                          editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                        }`}
-                      >
-                        Pro
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Bell size={16} className="text-gourmand-biscuit shrink-0" aria-hidden />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Rappels</span>
-                      {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
+                        <option value="">—</option>
+                        {desserts.map(d => (
+                          <option key={d.id} value={d.id}>
+                            {d.emoji} {d.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={1}
+                        max={999}
+                        disabled={editing.status !== 'pending'}
+                        className="gourmand-input w-14 shrink-0 text-center text-sm py-2 px-1 disabled:opacity-50"
+                        value={item.quantity}
+                        onChange={e => setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })}
+                      />
+                      {editing.items.length > 1 && editing.status === 'pending' && (
                         <button
                           type="button"
-                          onClick={handleRequestPerm}
-                          className="ml-auto text-xs font-semibold text-gourmand-chocolate underline cursor-pointer"
+                          onClick={() => removeItem(idx)}
+                          className="shrink-0 p-2 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer"
+                          aria-label="Supprimer la ligne"
                         >
-                          {notifPerm === 'denied' ? 'Bloqué' : 'Activer'}
+                          <X size={16} />
                         </button>
                       )}
                     </div>
-                    <div className="flex gap-2 flex-wrap">
-                      {NOTIFY_OPTIONS.map(opt => (
-                        <button
-                          type="button"
-                          key={opt.value}
-                          onClick={() => toggleNotify(opt.value)}
-                          disabled={notifPerm === 'denied' || notifPerm === 'unsupported'}
-                          className={`min-h-11 px-3 rounded-xl text-xs font-semibold border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                            editing.notifyBefore.includes(opt.value)
-                              ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
-                              : 'bg-white text-gourmand-biscuit border-gourmand-border'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <FormLabel>Statut</FormLabel>
-                    <select
-                      className="gourmand-input w-full text-base"
-                      value={editing.status}
-                      onChange={e => setEditing(prev => ({ ...prev, status: e.target.value as CommandeStatus }))}
-                    >
-                      <option value="pending">En attente</option>
-                      <option value="ready">Prête</option>
-                      <option value="delivered">Livrée</option>
-                    </select>
-                    <p className="text-xs text-gourmand-biscuit mt-2 leading-relaxed">
-                      « Prête » n’est enregistré que si la production est complète dans l’onglet Cuisine.
-                    </p>
-                  </div>
-                  <div>
-                    <FormLabel>Notes</FormLabel>
-                    <textarea
-                      className="gourmand-input w-full resize-none min-h-[100px] text-base"
-                      rows={3}
-                      value={editing.notes}
-                      onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
-                    />
-                  </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => void handleSaveDetailCommand()}
+                  disabled={saving}
+                  className="gourmand-btn-primary w-full cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {saving ? '…' : 'Enregistrer'}
+                </button>
+                {detailNext && (
                   <button
                     type="button"
-                    onClick={() => void handleSaveDetailInfos()}
-                    disabled={saving}
-                    className="gourmand-btn-primary w-full cursor-pointer disabled:cursor-not-allowed"
+                    onClick={() => void handleAdvanceStatus(detailCommand)}
+                    className="min-h-11 w-full rounded-xl border border-gourmand-border bg-white text-sm font-semibold text-gourmand-chocolate flex items-center justify-center gap-2 cursor-pointer active:bg-gourmand-bg"
                   >
-                    {saving ? 'Enregistrement…' : 'Enregistrer'}
+                    <Check size={16} strokeWidth={2.5} aria-hidden />
+                    {STATUS_NEXT_LABEL[detailCommand.status]}
                   </button>
-                </>
-              )}
-
-              {detailPanel === null && (
-                <>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`gourmand-chip ${
-                        detailCommand.customerType === 'pro'
-                          ? 'bg-gourmand-chocolate text-white'
-                          : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
-                      }`}
-                    >
-                      {detailCommand.customerType === 'pro' ? 'Pro' : 'Particulier'}
-                    </span>
-                    <span
-                      className={`gourmand-chip ${
-                        detailCommand.status === 'pending'
-                          ? 'bg-amber-100 text-amber-800'
-                          : detailCommand.status === 'ready'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-emerald-100 text-emerald-700'
-                      }`}
-                    >
-                      {STATUS_LABEL[detailCommand.status]}
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl border border-gourmand-border bg-gourmand-bg/40 px-3 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gourmand-biscuit">Production</p>
-                    <p className="text-sm text-gourmand-cocoa mt-1 leading-relaxed">
-                      {detailCommand.status === 'pending'
-                        ? `${producedPieces(detailCommand.items)}/${totalPieces(detailCommand.items)} unités cochées en cuisine. Poursuis dans l’onglet Cuisine.`
-                        : 'Commande prête ou livrée — la production n’est plus modifiable ici.'}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit mb-2">Desserts</p>
-                    <ul className="space-y-2">
-                      {detailMergedItems.map((item, idx) => (
-                        <li
-                          key={`${item.dessertId ?? item.dessertName}-${idx}`}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-gourmand-border bg-white px-3 py-3 min-w-0"
-                        >
-                          <span className="text-sm font-semibold text-gourmand-chocolate truncate">{item.dessertName}</span>
-                          <span className="text-sm font-bold tabular-nums text-gourmand-cocoa shrink-0">×{item.quantity}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    {detailCommand.status === 'pending' && (
-                      <button type="button" onClick={openEditDessertsPanel} className="gourmand-btn-primary w-full cursor-pointer">
-                        Modifier les desserts
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={openInfosPanel}
-                      className="gourmand-btn-primary w-full cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Info size={18} aria-hidden />
-                      Infos commande
-                    </button>
-                    {detailNext && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleAdvanceStatus(detailCommand);
-                        }}
-                        className="min-h-11 w-full rounded-xl border-2 border-gourmand-chocolate bg-white text-sm font-semibold text-gourmand-chocolate flex items-center justify-center gap-2 cursor-pointer active:bg-gourmand-bg"
-                      >
-                        <Check size={18} strokeWidth={2.5} aria-hidden />
-                        {STATUS_NEXT_LABEL[detailCommand.status]}
-                      </button>
-                    )}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTarget(detailCommand)}
-                        className="min-h-11 rounded-xl border border-red-200 bg-white text-sm font-semibold text-red-600 active:bg-red-50 cursor-pointer"
-                      >
-                        Supprimer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDetailCommand(null);
-                          setDetailPanel(null);
-                        }}
-                        className="min-h-11 rounded-xl border border-gourmand-border bg-white text-sm font-semibold text-gourmand-cocoa active:bg-gourmand-bg cursor-pointer"
-                      >
-                        Fermer
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(detailCommand)}
+                    className="min-h-11 rounded-xl border border-red-100 text-sm font-semibold text-red-500 active:bg-red-50 cursor-pointer"
+                  >
+                    Supprimer
+                  </button>
+                  <button type="button" onClick={() => setDetailCommand(null)} className="min-h-11 rounded-xl border border-gourmand-border text-sm font-semibold text-gourmand-cocoa cursor-pointer">
+                    Fermer
+                  </button>
+                </div>
+              </div>
             </div>
           </Modal>
         )}
@@ -1355,6 +1183,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
               <div className="bg-gourmand-bg rounded-xl p-3 space-y-1.5">
                 {mergeCommandeItems(deliverTarget.items).map((item, i) => (
                   <p key={i} className="text-sm font-medium break-words">
+                    <span className="mr-1">{item.dessertEmoji || '🍰'}</span>
                     {item.quantity}× {item.dessertName || '–'}
                   </p>
                 ))}

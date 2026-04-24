@@ -139,5 +139,3 @@ export function dessertLabelForKey(key: string, lines: KitchenGroupedLine[]): { 
   };
 }
 
-/** Au-delà de ce nombre d’unités, l’UI cuisine utilise un compteur +/- au lieu d’une rangée de cercles. */
-export const KITCHEN_UNIT_CIRCLES_MAX = 10;
