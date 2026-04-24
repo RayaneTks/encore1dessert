@@ -85,6 +85,8 @@ export interface CommandeItem {
   dessertName: string;
   dessertEmoji: string;
   quantity: number;
+  /** Unités déjà fabriquées (0…quantity). Absent en base = 0. */
+  producedQty?: number;
 }
 
 export interface Commande {

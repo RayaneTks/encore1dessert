@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { RawIngredient, Base, BaseComponent, Dessert, DessertComponent, HistoryEntry, SnapshotLine, Commande, CommandeStatus, CommandeItem, NotifyBefore } from '../types';
+import { normalizeCommandeItems } from './commandeProduction';
 
 // ─── RAW INGREDIENTS ────────────────────────────────────────
 
@@ -287,10 +288,11 @@ export async function deleteHistoryEntry(id: string): Promise<void> {
 // ─── COMMANDES ──────────────────────────────────────────────
 
 function rowToCommande(row: any): Commande {
+  const rawItems = (row.items as CommandeItem[]) || [];
   return {
     id: row.id,
     clientName: row.client_name,
-    items: (row.items as CommandeItem[]) || [],
+    items: normalizeCommandeItems(rawItems),
     orderDate: row.order_date,
     deliveryDate: row.delivery_date,
     notes: row.notes || '',
