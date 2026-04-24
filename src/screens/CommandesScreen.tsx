@@ -104,14 +104,6 @@ function formatDeliveryShort(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-function itemsSummary(items: CommandeItem[]): string {
-  const merged = mergeCommandeItems(items);
-  const parts = merged.map(i => `${i.dessertEmoji ? `${i.dessertEmoji} ` : ''}${i.quantity}× ${i.dessertName}`);
-  if (parts.length === 0) return '–';
-  if (parts.length <= 2) return parts.join(', ');
-  return `${parts.slice(0, 2).join(', ')} +${parts.length - 2}`;
-}
-
 function totalPieces(items: CommandeItem[]): number {
   return items.reduce((s, i) => s + i.quantity, 0);
 }
@@ -466,7 +458,13 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const patchCommandeItem = useCallback(
     async (cmd: Commande, itemIndex: number, patch: Partial<CommandeItem>) => {
       const items = cmd.items.map((it, i) => (i === itemIndex ? normalizeCommandeItem({ ...it, ...patch }) : it));
-      await persistCommande({ ...cmd, items });
+      const candid = { ...cmd, items };
+      if (cmd.status === 'pending' && commandeProductionComplete(candid)) {
+        const merged = mergeCommandeItems(items);
+        await persistCommande({ ...cmd, items: merged, status: 'ready' }, 'Commande prête ✓');
+      } else {
+        await persistCommande(candid);
+      }
     },
     [persistCommande],
   );
@@ -777,7 +775,6 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                               {STATUS_LABEL[cmd.status]}
                             </span>
                           </div>
-                          <p className="text-xs text-gourmand-biscuit mt-0.5 truncate">{itemsSummary(cmd.items)}</p>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gourmand-biscuit">
                             <span className="inline-flex items-center gap-1 shrink-0">
                               <Clock size={10} aria-hidden />
