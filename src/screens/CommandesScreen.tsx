@@ -257,6 +257,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const [screenTab, setScreenTab] = useState<ScreenTab>('commandes');
   const [formOpen, setFormOpen] = useState(false);
   const [detailCommand, setDetailCommand] = useState<Commande | null>(null);
+  /** Panneau « Options & détail » dans le modal commande (replié par défaut). */
+  const [detailMoreOpen, setDetailMoreOpen] = useState(false);
   const [editing, setEditing] = useState<Commande>(BLANK);
   const [deleteTarget, setDeleteTarget] = useState<Commande | null>(null);
   const [saving, setSaving] = useState(false);
@@ -308,6 +310,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
     const normalized = normalizeCommandeItems(cmd.items.map(i => ({ ...i })));
     setDetailCommand({ ...cmd, items: normalized });
     setEditing({ ...cmd, items: normalized.length ? normalized.map(i => ({ ...i })) : [{ ...BLANK_ITEM }] });
+    setDetailMoreOpen(false);
   };
 
   const openNewCommandForm = () => {
@@ -1021,219 +1024,22 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
         )}
       </AnimatePresence>
 
-      {/* Détail commande — une seule vue scrollable */}
+      {/* Détail commande : résumé centré, options repliables, actions en pied fixe */}
       <AnimatePresence>
         {detailCommand && (
-          <Modal title={editing.clientName || 'Commande'} onClose={() => setDetailCommand(null)}>
-            <div className="min-w-0 space-y-5 pb-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span
-                  className={`gourmand-chip shrink-0 ${
-                    editing.customerType === 'pro'
-                      ? 'bg-gourmand-chocolate text-white'
-                      : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
-                  }`}
-                >
-                  {editing.customerType === 'pro' ? 'Pro' : 'Part.'}
-                </span>
-                <span
-                  className={`gourmand-chip shrink-0 ${
-                    editing.status === 'pending'
-                      ? 'bg-amber-100 text-amber-800'
-                      : editing.status === 'ready'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-emerald-100 text-emerald-700'
-                  }`}
-                >
-                  {STATUS_LABEL[editing.status]}
-                </span>
-                {editing.status === 'pending' && (
-                  <span className="ml-auto shrink-0 text-xs font-medium tabular-nums text-gourmand-biscuit">
-                    cuisine {producedPieces(detailCommand.items)}/{totalPieces(detailCommand.items)}
-                  </span>
-                )}
-              </div>
-
-              <section className="min-w-0 space-y-3" aria-label="Informations">
-                <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="min-w-0">
-                    <FormLabel>Prise</FormLabel>
-                    <input
-                      type="date"
-                      className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
-                      value={editing.orderDate}
-                      onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <FormLabel>Livraison</FormLabel>
-                    <input
-                      type="date"
-                      className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
-                      value={editing.deliveryDate}
-                      onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="min-w-0">
-                  <FormLabel>Client</FormLabel>
-                  <input
-                    className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
-                    value={editing.clientName}
-                    onChange={e => setEditing(prev => ({ ...prev, clientName: e.target.value }))}
-                  />
-                </div>
-
-                <div className="grid min-w-0 grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
-                    className={`gourmand-segment-compact min-h-11 cursor-pointer text-base ${
-                      editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                    }`}
-                  >
-                    Particulier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
-                    className={`gourmand-segment-compact min-h-11 cursor-pointer text-base ${
-                      editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
-                    }`}
-                  >
-                    Pro
-                  </button>
-                </div>
-
-                <div className="min-w-0">
-                  <div className="mb-1.5 flex min-w-0 items-center gap-2">
-                    <Bell size={14} className="shrink-0 text-gourmand-biscuit" aria-hidden />
-                    <span className="text-xs font-semibold text-gourmand-biscuit">Rappels</span>
-                    {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
-                      <button
-                        type="button"
-                        onClick={handleRequestPerm}
-                        className="ml-auto shrink-0 cursor-pointer text-xs font-semibold text-gourmand-chocolate underline"
-                      >
-                        {notifPerm === 'denied' ? 'Bloqué' : 'Activer'}
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex min-w-0 flex-wrap gap-2">
-                    {NOTIFY_OPTIONS.map(opt => (
-                      <button
-                        type="button"
-                        key={opt.value}
-                        onClick={() => toggleNotify(opt.value)}
-                        disabled={notifPerm === 'denied' || notifPerm === 'unsupported'}
-                        className={`min-h-11 shrink-0 rounded-lg border px-3 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40 ${
-                          editing.notifyBefore.includes(opt.value)
-                            ? 'border-gourmand-chocolate bg-gourmand-chocolate text-white'
-                            : 'border-gourmand-border bg-white text-gourmand-biscuit'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="min-w-0">
-                  <FormLabel>Statut</FormLabel>
-                  <select
-                    className="gourmand-input w-full max-w-full min-w-0 text-base py-2.5"
-                    value={editing.status}
-                    onChange={e => setEditing(prev => ({ ...prev, status: e.target.value as CommandeStatus }))}
-                  >
-                    <option value="pending">En attente</option>
-                    <option value="ready">Prête</option>
-                    <option value="delivered">Livrée</option>
-                  </select>
-                </div>
-
-                <div className="min-w-0">
-                  <FormLabel>Notes</FormLabel>
-                  <textarea
-                    className="gourmand-input w-full max-w-full min-w-0 resize-none text-base"
-                    rows={3}
-                    value={editing.notes}
-                    onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
-                  />
-                </div>
-              </section>
-
-              <section className="min-w-0 border-t border-gourmand-border/70 pt-4" aria-label="Desserts">
-                <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Desserts</span>
-                  {editing.status === 'pending' && (
-                    <button
-                      type="button"
-                      onClick={addItem}
-                      className="flex shrink-0 cursor-pointer items-center gap-0.5 text-xs font-semibold text-gourmand-chocolate"
-                    >
-                      <Plus size={14} /> ligne
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  {editing.items.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex min-w-0 flex-col gap-2 rounded-xl border border-gourmand-border bg-gourmand-bg/20 p-2 sm:flex-row sm:items-center"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="w-9 shrink-0 text-center text-lg" aria-hidden>
-                          {item.dessertEmoji || '🍰'}
-                        </span>
-                        <select
-                          className="gourmand-input min-h-11 min-w-0 flex-1 text-base"
-                          value={item.dessertId || ''}
-                          onChange={e => handleDessertChange(idx, e.target.value)}
-                          disabled={editing.status !== 'pending'}
-                        >
-                          <option value="">—</option>
-                          {desserts.map(d => (
-                            <option key={d.id} value={d.id}>
-                              {d.emoji} {d.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex shrink-0 items-center justify-end gap-2 sm:w-auto">
-                        <input
-                          type="number"
-                          min={1}
-                          max={999}
-                          disabled={editing.status !== 'pending'}
-                          className="gourmand-input h-11 w-16 shrink-0 text-center text-base disabled:opacity-50"
-                          value={item.quantity}
-                          onChange={e =>
-                            setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })
-                          }
-                        />
-                        {editing.items.length > 1 && editing.status === 'pending' && (
-                          <button
-                            type="button"
-                            onClick={() => removeItem(idx)}
-                            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-red-400 hover:bg-red-50"
-                            aria-label="Supprimer la ligne"
-                          >
-                            <X size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <div className="flex min-w-0 flex-col gap-2 border-t border-gourmand-border/60 pt-4">
+          <Modal
+            title="Commande"
+            onClose={() => {
+              setDetailCommand(null);
+              setDetailMoreOpen(false);
+            }}
+            footer={
+              <div className="flex min-w-0 flex-col gap-2">
                 <button
                   type="button"
                   onClick={() => void handleSaveDetailCommand()}
                   disabled={saving}
-                  className="gourmand-btn-primary w-full max-w-full cursor-pointer disabled:cursor-not-allowed"
+                  className="gourmand-btn-primary w-full disabled:cursor-not-allowed"
                 >
                   {saving ? '…' : 'Enregistrer'}
                 </button>
@@ -1241,29 +1047,248 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   <button
                     type="button"
                     onClick={() => void handleAdvanceStatus(detailCommand)}
-                    className="flex min-h-11 w-full max-w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gourmand-border bg-white text-base font-semibold text-gourmand-chocolate active:bg-gourmand-bg"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-gourmand-border bg-white text-sm font-semibold text-gourmand-chocolate active:bg-gourmand-bg"
                   >
                     <Check size={18} strokeWidth={2.5} aria-hidden />
                     {STATUS_NEXT_LABEL[detailCommand.status]}
                   </button>
                 )}
-                <div className="grid min-w-0 grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDeleteTarget(detailCommand)}
-                    className="min-h-11 w-full max-w-full cursor-pointer rounded-xl border border-red-100 text-sm font-semibold text-red-500 active:bg-red-50"
-                  >
-                    Supprimer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDetailCommand(null)}
-                    className="min-h-11 w-full max-w-full cursor-pointer rounded-xl border border-gourmand-border text-sm font-semibold text-gourmand-cocoa"
-                  >
-                    Fermer
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(detailCommand)}
+                  className="min-h-10 w-full rounded-xl text-sm font-semibold text-red-500 active:bg-red-50"
+                >
+                  Supprimer la commande
+                </button>
               </div>
+            }
+          >
+            <div className="min-w-0 space-y-4 pb-2">
+              <div className="text-center">
+                <p className="text-xl font-bold leading-tight text-gourmand-chocolate">{editing.clientName}</p>
+                <p className="mt-1.5 text-sm text-gourmand-biscuit">
+                  Livraison {formatDate(editing.deliveryDate)}
+                  {editing.orderDate !== editing.deliveryDate && (
+                    <span className="block text-xs opacity-90">Prise le {formatDate(editing.orderDate)}</span>
+                  )}
+                </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <span
+                    className={`gourmand-chip ${
+                      editing.customerType === 'pro'
+                        ? 'bg-gourmand-chocolate text-white'
+                        : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
+                    }`}
+                  >
+                    {editing.customerType === 'pro' ? 'Pro' : 'Particulier'}
+                  </span>
+                  <span
+                    className={`gourmand-chip ${
+                      editing.status === 'pending'
+                        ? 'bg-amber-100 text-amber-800'
+                        : editing.status === 'ready'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {STATUS_LABEL[editing.status]}
+                  </span>
+                </div>
+                {editing.status === 'pending' && (
+                  <p className="mt-3 text-xs font-medium tabular-nums text-gourmand-biscuit">
+                    Cuisine {producedPieces(detailCommand.items)}/{totalPieces(detailCommand.items)}
+                  </p>
+                )}
+              </div>
+
+              <ul className="mx-auto max-w-sm space-y-2 rounded-2xl border border-gourmand-border/80 bg-gourmand-bg/30 p-3">
+                {mergeCommandeItems(editing.items).map((row, idx) => (
+                  <li key={`${row.dessertId ?? row.dessertName}-${idx}`} className="flex items-center gap-3 text-left">
+                    <span className="text-lg leading-none" aria-hidden>
+                      {row.dessertEmoji || '🍰'}
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-semibold text-gourmand-chocolate">{row.dessertName}</span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-gourmand-cocoa">×{row.quantity}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                type="button"
+                onClick={() => setDetailMoreOpen(v => !v)}
+                aria-expanded={detailMoreOpen}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gourmand-border bg-white py-3 text-sm font-semibold text-gourmand-cocoa transition-colors active:bg-gourmand-bg"
+              >
+                {detailMoreOpen ? 'Masquer les options' : 'Modifier dates, statut, desserts…'}
+                <ChevronDown
+                  size={18}
+                  className={`text-gourmand-biscuit transition-transform duration-200 ${detailMoreOpen ? 'rotate-180' : ''}`}
+                  aria-hidden
+                />
+              </button>
+
+              {detailMoreOpen && (
+                <div className="space-y-4 border-t border-gourmand-border/60 pt-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="min-w-0">
+                      <FormLabel>Prise</FormLabel>
+                      <input
+                        type="date"
+                        className="gourmand-input w-full min-w-0 text-base"
+                        value={editing.orderDate}
+                        onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <FormLabel>Livraison</FormLabel>
+                      <input
+                        type="date"
+                        className="gourmand-input w-full min-w-0 text-base"
+                        value={editing.deliveryDate}
+                        onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0">
+                    <FormLabel>Client</FormLabel>
+                    <input
+                      className="gourmand-input w-full min-w-0 text-base"
+                      value={editing.clientName}
+                      onChange={e => setEditing(prev => ({ ...prev, clientName: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(prev => ({ ...prev, customerType: 'particulier' }))}
+                      className={`gourmand-segment-compact min-h-11 text-base ${
+                        editing.customerType === 'particulier' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
+                      }`}
+                    >
+                      Particulier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(prev => ({ ...prev, customerType: 'pro' }))}
+                      className={`gourmand-segment-compact min-h-11 text-base ${
+                        editing.customerType === 'pro' ? 'gourmand-segment-active' : 'gourmand-segment-idle'
+                      }`}
+                    >
+                      Pro
+                    </button>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-gourmand-biscuit">Rappels</span>
+                      {notifPerm !== 'granted' && notifPerm !== 'unsupported' && (
+                        <button type="button" onClick={handleRequestPerm} className="text-xs font-semibold text-gourmand-chocolate underline">
+                          {notifPerm === 'denied' ? 'Bloqué' : 'Activer'}
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {NOTIFY_OPTIONS.map(opt => (
+                        <button
+                          type="button"
+                          key={opt.value}
+                          onClick={() => toggleNotify(opt.value)}
+                          disabled={notifPerm === 'denied' || notifPerm === 'unsupported'}
+                          className={`min-h-11 rounded-lg border px-3 text-xs font-semibold disabled:opacity-40 ${
+                            editing.notifyBefore.includes(opt.value)
+                              ? 'border-gourmand-chocolate bg-gourmand-chocolate text-white'
+                              : 'border-gourmand-border bg-white text-gourmand-biscuit'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="min-w-0">
+                    <FormLabel>Statut</FormLabel>
+                    <select
+                      className="gourmand-input w-full min-w-0 text-base"
+                      value={editing.status}
+                      onChange={e => setEditing(prev => ({ ...prev, status: e.target.value as CommandeStatus }))}
+                    >
+                      <option value="pending">En attente</option>
+                      <option value="ready">Prête</option>
+                      <option value="delivered">Livrée</option>
+                    </select>
+                  </div>
+
+                  <div className="min-w-0">
+                    <FormLabel>Notes</FormLabel>
+                    <textarea
+                      className="gourmand-input min-h-[88px] w-full min-w-0 resize-none text-base"
+                      rows={3}
+                      value={editing.notes}
+                      onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Lignes desserts</span>
+                      {editing.status === 'pending' && (
+                        <button type="button" onClick={addItem} className="flex items-center gap-0.5 text-xs font-semibold text-gourmand-chocolate">
+                          <Plus size={14} /> Ajouter
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {editing.items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex flex-wrap items-center gap-2 rounded-xl border border-gourmand-border bg-white p-2.5"
+                        >
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center text-xl" aria-hidden>
+                            {item.dessertEmoji || '🍰'}
+                          </span>
+                          <select
+                            className="gourmand-input min-h-11 min-w-[8rem] flex-1 basis-[60%] text-base sm:basis-auto"
+                            value={item.dessertId || ''}
+                            onChange={e => handleDessertChange(idx, e.target.value)}
+                            disabled={editing.status !== 'pending'}
+                          >
+                            <option value="">—</option>
+                            {desserts.map(d => (
+                              <option key={d.id} value={d.id}>
+                                {d.emoji} {d.name}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min={1}
+                            max={999}
+                            disabled={editing.status !== 'pending'}
+                            className="gourmand-input h-11 w-[4.25rem] shrink-0 text-center text-base disabled:opacity-50"
+                            value={item.quantity}
+                            onChange={e =>
+                              setItem(idx, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })
+                            }
+                          />
+                          {editing.items.length > 1 && editing.status === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() => removeItem(idx)}
+                              className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-red-400 hover:bg-red-50 sm:ml-0"
+                              aria-label="Supprimer la ligne"
+                            >
+                              <Trash2 size={18} strokeWidth={2} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Modal>
         )}

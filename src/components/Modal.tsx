@@ -7,9 +7,11 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   onClose: () => void;
+  /** Barre d’actions fixe sous le contenu scrollable (ex. commande). */
+  footer?: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ title, children, onClose }) => {
+export const Modal: React.FC<ModalProps> = ({ title, children, onClose, footer }) => {
   const reduceMotion = usePrefersReducedMotion();
 
   React.useEffect(() => {
@@ -41,21 +43,31 @@ export const Modal: React.FC<ModalProps> = ({ title, children, onClose }) => {
         aria-labelledby="modal-title"
         className="relative flex max-h-[min(92dvh,720px)] w-full max-w-[min(100%,400px)] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gourmand-border px-4 py-4 sm:px-5">
-          <h3 id="modal-title" className="min-w-0 flex-1 text-lg font-bold leading-tight tracking-tight sm:text-xl">
+        <div className="grid shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center border-b border-gourmand-border px-3 py-3 sm:px-4">
+          <span className="w-11" aria-hidden />
+          <h3
+            id="modal-title"
+            className="min-w-0 px-1 text-center text-base font-bold leading-snug tracking-tight text-gourmand-chocolate sm:text-lg"
+          >
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fermer la fenêtre"
-            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-gourmand-bg transition-colors hover:bg-gourmand-border/40 active:opacity-80"
+            className="mx-auto flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-gourmand-bg transition-colors hover:bg-gourmand-border/40 active:opacity-80"
           >
             <X size={18} />
           </button>
         </div>
 
         <div className="modal-scroll min-h-0 flex-1 overscroll-contain px-4 py-4 sm:px-5">{children}</div>
+
+        {footer ? (
+          <div className="shrink-0 border-t border-gourmand-border bg-gourmand-bg/40 px-4 py-3 sm:px-5">
+            {footer}
+          </div>
+        ) : null}
       </motion.div>
     </motion.div>
   );
