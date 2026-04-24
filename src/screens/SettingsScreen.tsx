@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scale, Target, Database, RotateCcw } from 'lucide-react';
+import { Scale, Target, Database, RotateCcw, Donut } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import { SettingsRow } from '../components/SettingsRow';
@@ -71,8 +71,8 @@ export const SettingsScreen: React.FC<Props> = ({ targetMargin, onChangeTargetMa
         </section>
 
         <footer className="pt-4 pb-6 text-center border-t border-gourmand-border/40">
-          <div className="w-14 h-14 rounded-2xl bg-white border border-gourmand-border mx-auto flex items-center justify-center text-2xl shadow-sm mb-5">
-            🍩
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-gourmand-border bg-white text-gourmand-chocolate shadow-sm" aria-hidden>
+            <Donut size={28} strokeWidth={1.75} />
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gourmand-cocoa/70">
             Encore 1 Dessert

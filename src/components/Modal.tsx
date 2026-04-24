@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface ModalProps {
   title: string;
@@ -9,6 +10,8 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({ title, children, onClose }) => {
+  const reduceMotion = usePrefersReducedMotion();
+
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -19,17 +22,20 @@ export const Modal: React.FC<ModalProps> = ({ title, children, onClose }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: reduceMotion ? 1 : 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      exit={{ opacity: reduceMotion ? 1 : 0 }}
+      transition={{ duration: reduceMotion ? 0.01 : 0.18 }}
       className="fixed inset-0 z-[200] flex max-h-[100dvh] items-end justify-center overflow-x-hidden px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 sm:px-4 sm:pb-8"
     >
       <div className="absolute inset-0 bg-gourmand-chocolate/40 backdrop-blur-sm" onClick={onClose} aria-hidden />
       <motion.div
-        initial={{ y: 24 }}
+        initial={{ y: reduceMotion ? 0 : 20 }}
         animate={{ y: 0 }}
-        exit={{ y: 24 }}
-        transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+        exit={{ y: reduceMotion ? 0 : 20 }}
+        transition={
+          reduceMotion ? { duration: 0.01 } : { duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }
+        }
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

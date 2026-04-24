@@ -54,7 +54,7 @@ const ToastItem: React.FC<{ toast: ToastData; onDismiss: (id: string) => void }>
       <button
         onClick={() => onDismiss(toast.id)}
         aria-label="Fermer la notification"
-        className="opacity-60 hover:opacity-100 flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+        className="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg opacity-60 hover:opacity-100"
       >
         <X size={16} />
       </button>

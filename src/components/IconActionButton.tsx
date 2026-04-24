@@ -22,7 +22,7 @@ export const IconActionButton: React.FC<IconActionButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`${box} bg-gourmand-chocolate text-white flex items-center justify-center active:scale-95 shadow-sm transition-transform disabled:opacity-50 disabled:active:scale-100`}
+      className={`${box} flex cursor-pointer items-center justify-center bg-gourmand-chocolate text-white shadow-sm transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100`}
     >
       {icon}
     </button>

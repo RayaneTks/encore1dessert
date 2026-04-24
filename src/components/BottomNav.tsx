@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, LayoutGroup } from 'motion/react';
 import { LayoutDashboard, ChefHat, Calculator, Beaker, Apple, ClipboardList } from 'lucide-react';
 import { Tab } from '../types';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -18,6 +19,8 @@ const tabs: { id: Tab; label: string; icon: React.FC<any> }[] = [
 ];
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
+  const reduceMotion = usePrefersReducedMotion();
+
   return (
     <nav className="nav-blur h-[88px] fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-1 flex justify-between items-start pt-2 z-[100] safe-area-bottom">
       <LayoutGroup>
@@ -26,16 +29,24 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             aria-label={`Ouvrir ${tab.label}`}
-            className={`relative flex flex-col items-center justify-center gap-1 flex-1 min-h-[44px] transition-colors duration-200 ${
+            className={`relative flex flex-1 min-h-[44px] flex-col items-center justify-center gap-1 transition-colors duration-200 ${
               activeTab === tab.id ? 'text-gourmand-chocolate' : 'text-gourmand-biscuit'
             }`}
           >
             <motion.div
-              animate={{
-                scale: activeTab === tab.id ? 1.05 : 1,
-                y: activeTab === tab.id ? -2 : 0,
-              }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              animate={
+                reduceMotion
+                  ? { scale: 1, y: 0 }
+                  : {
+                      scale: activeTab === tab.id ? 1.05 : 1,
+                      y: activeTab === tab.id ? -2 : 0,
+                    }
+              }
+              transition={
+                reduceMotion
+                  ? { duration: 0.01 }
+                  : { type: 'spring', stiffness: 400, damping: 28 }
+              }
             >
               <tab.icon size={20} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
             </motion.div>
