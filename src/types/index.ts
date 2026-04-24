@@ -102,6 +102,25 @@ export interface Commande {
   createdAt: string;
 }
 
+// ─── Offre lot (caisse) — stockée en localStorage ──────────
+/**
+ * Offre « lot » à la caisse.
+ * - Sans forfait : chaque lot complet = (bundleSize − 1) × prix catalogue + `discountedUnitPrice`.
+ * - Avec forfait : chaque lot complet = `fixedBundleTotal` (ex. 15 € pour 5 tartes), le reste au prix catalogue.
+ */
+export interface BundleOfferConfig {
+  enabled: boolean;
+  bundleSize: number;
+  /** Prix de la dernière unité de chaque lot (ex. 1 €) si `useFixedBundleTotal` est false. */
+  discountedUnitPrice: number;
+  /** Si true : `fixedBundleTotal` € par lot complet de `bundleSize` unités, puis reliquat au catalogue. */
+  useFixedBundleTotal: boolean;
+  /** Total TTC d’un lot complet (ex. 15 pour 5 × 3 € moyen). Ignoré si `useFixedBundleTotal` est false. */
+  fixedBundleTotal: number;
+  /** Particulier, Pro, ou les deux */
+  appliesTo: 'particulier' | 'pro' | 'both';
+}
+
 // ─── Stats ─────────────────────────────────────────────────
 export type StatPeriod = 'week' | 'month' | 'all';
 

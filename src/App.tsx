@@ -9,6 +9,7 @@ import {
   Commande,
   ToastData,
   ShowToastOptions,
+  BundleOfferConfig,
 } from './types';
 import {
   calculateDessertCost,
@@ -16,6 +17,7 @@ import {
 } from './lib/calculations';
 import * as db from './lib/db';
 import { checkAndFireNotifications, syncAllNotifications } from './lib/notifications';
+import { loadBundleOffer, saveBundleOffer, effectiveAverageUnitPrice, computeBundleLineTotal } from './lib/bundleOffer';
 
 import { BottomNav } from './components/BottomNav';
 import { Toast } from './components/Toast';
@@ -44,6 +46,7 @@ export default function App() {
     const s = localStorage.getItem('e1d_target_margin');
     return s ? parseFloat(s) : 0.65;
   });
+  const [bundleOffer, setBundleOffer] = useState<BundleOfferConfig>(() => loadBundleOffer());
 
   // ─── Toast ─────────────────────────────────────────────────
   const showToast = useCallback(
@@ -178,8 +181,12 @@ export default function App() {
   ) => {
     const unitCost = calculateDessertCost(dessert, ingredients, bases);
     const basePrice = customerType === 'pro' ? dessert.sellPricePro : dessert.sellPriceParticulier;
-    const unitPrice = overridePrice || basePrice;
-    const totalRevenue = unitPrice * quantity;
+    const catalogueUnit =
+      overridePrice !== undefined && overridePrice !== null && Number.isFinite(overridePrice)
+        ? overridePrice
+        : basePrice;
+    const totalRevenue = computeBundleLineTotal(quantity, catalogueUnit, bundleOffer, customerType);
+    const unitPrice = effectiveAverageUnitPrice(quantity, catalogueUnit, bundleOffer, customerType);
     const totalCost = unitCost * quantity;
     const totalProfit = totalRevenue - totalCost;
     const marginRate = totalRevenue > 0 ? totalProfit / totalRevenue : 0;
@@ -191,7 +198,12 @@ export default function App() {
         dessertName: dessert.name,
         dessertEmoji: dessert.emoji,
         quantitySold: quantity,
-        unitCost, unitPrice, totalRevenue, totalCost, totalProfit, marginRate,
+        unitCost,
+        unitPrice,
+        totalRevenue,
+        totalCost,
+        totalProfit,
+        marginRate,
         customerType,
         linesSnapshot,
       });
@@ -200,7 +212,7 @@ export default function App() {
       console.error(err);
       showToast(err.message || 'Erreur lors de l\'enregistrement', 'error');
     }
-  }, [ingredients, bases, showToast]);
+  }, [ingredients, bases, bundleOffer, showToast]);
 
   const handleDeleteHistory = useCallback(async (id: string) => {
     try {
@@ -234,6 +246,11 @@ export default function App() {
   const handleChangeTargetMargin = useCallback((val: number) => {
     localStorage.setItem('e1d_target_margin', val.toString());
     setTargetMargin(val);
+  }, []);
+
+  const handleChangeBundleOffer = useCallback((config: BundleOfferConfig) => {
+    saveBundleOffer(config);
+    setBundleOffer(config);
   }, []);
 
   const handleDeleteCommande = useCallback(async (id: string) => {
@@ -288,6 +305,7 @@ export default function App() {
                 commandes={commandes}
                 setActiveTab={setActiveTab}
                 targetMargin={targetMargin}
+                bundleOffer={bundleOffer}
                 onValidate={addHistoryEntry}
                 showToast={showToast}
               />
@@ -348,6 +366,8 @@ export default function App() {
                 key="settings"
                 targetMargin={targetMargin}
                 onChangeTargetMargin={handleChangeTargetMargin}
+                bundleOffer={bundleOffer}
+                onChangeBundleOffer={handleChangeBundleOffer}
               />
             )}
           </AnimatePresence>

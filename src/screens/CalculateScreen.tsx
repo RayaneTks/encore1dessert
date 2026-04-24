@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, TrendingUp, Check, Calculator, Clock } from 'lucide-react';
-import { Dessert, RawIngredient, Base, Commande, Tab } from '../types';
+import { Dessert, RawIngredient, Base, Commande, Tab, BundleOfferConfig } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow } from '../components/FilterControls';
@@ -16,6 +16,7 @@ import {
   calculateBaseCostPerKg,
   createFullSnapshot,
 } from '../lib/calculations';
+import { computeBundleLineTotal } from '../lib/bundleOffer';
 
 interface Props {
   desserts: Dessert[];
@@ -24,11 +25,22 @@ interface Props {
   commandes: Commande[];
   setActiveTab: (tab: Tab) => void;
   targetMargin: number;
+  bundleOffer: BundleOfferConfig;
   onValidate: (dessert: Dessert, quantity: number, customerType: 'particulier' | 'pro', overridePrice?: number) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases, commandes, setActiveTab, targetMargin, onValidate, showToast }) => {
+export const CalculateScreen: React.FC<Props> = ({
+  desserts,
+  ingredients,
+  bases,
+  commandes,
+  setActiveTab,
+  targetMargin,
+  bundleOffer,
+  onValidate,
+  showToast,
+}) => {
   const [selectedId, setSelectedId] = useState<string>(desserts[0]?.id || '');
   const [qty, setQty] = useState(1);
   const [showDetail, setShowDetail] = useState(false);
@@ -41,11 +53,23 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
   const selectedBasePrice = selected
     ? (customerType === 'pro' ? selected.sellPricePro : selected.sellPriceParticulier)
     : 0;
-  const price = priceOverride ? parseFloat(priceOverride) : selectedBasePrice;
-  const margin = price - cost;
-  const marginRate = price > 0 ? margin / price : 0;
-  const coeff = cost > 0 ? price / cost : 0;
+  const catalogueUnit = priceOverride ? parseFloat(priceOverride) : selectedBasePrice;
+  const catalogueOk = Number.isFinite(catalogueUnit) && catalogueUnit >= 0;
+  const unitForBundle = catalogueOk ? catalogueUnit : selectedBasePrice;
+  const lineTotal = computeBundleLineTotal(qty, unitForBundle, bundleOffer, customerType);
+  const effectiveUnit = qty > 0 ? lineTotal / qty : 0;
+  const margin = effectiveUnit - cost;
+  const marginRate = effectiveUnit > 0 ? margin / effectiveUnit : 0;
+  const coeff = cost > 0 ? effectiveUnit / cost : 0;
   const suggestedPrice = cost > 0 && targetMargin < 1 ? cost / (1 - targetMargin) : null;
+
+  const bundleApplies =
+    bundleOffer.enabled &&
+    qty >= bundleOffer.bundleSize &&
+    (bundleOffer.appliesTo === 'both' ||
+      (bundleOffer.appliesTo === 'particulier' && customerType === 'particulier') ||
+      (bundleOffer.appliesTo === 'pro' && customerType === 'pro')) &&
+    Math.abs(lineTotal - unitForBundle * qty) > 0.001;
 
   const todayISO = new Date().toISOString().split('T')[0];
   const todayCommandes = commandes.filter(c => c.deliveryDate === todayISO && c.status !== 'delivered');
@@ -83,6 +107,9 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
   };
 
   const marginColor = marginRate >= 0.6 ? 'text-emerald-400' : marginRate >= 0.4 ? 'text-amber-400' : 'text-red-400';
+
+  const plainTotal = unitForBundle * qty;
+  const bundleSaving = bundleApplies ? Math.max(0, plainTotal - lineTotal) : 0;
 
   if (desserts.length === 0) {
      return (
@@ -205,11 +232,11 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
               <div className="flex justify-between items-end mb-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Chiffre d'Affaire</p>
-                  <p className="text-3xl font-bold tracking-tight">{fmt(price * qty)}</p>
+                  <p className="text-3xl font-bold tracking-tight">{fmt(lineTotal)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Marge Brute</p>
-                  <p className={`text-2xl font-bold tracking-tight ${marginColor}`}>{fmt(margin * qty)}</p>
+                  <p className={`text-2xl font-bold tracking-tight ${marginColor}`}>{fmt(lineTotal - cost * qty)}</p>
                 </div>
               </div>
 
@@ -232,6 +259,12 @@ export const CalculateScreen: React.FC<Props> = ({ desserts, ingredients, bases,
                 </div>
               </div>
             </div>
+
+            {bundleSaving > 0 && (
+              <p className="text-center text-xs font-semibold text-emerald-300/90">
+                Offre lot : −{fmt(bundleSaving)} vs catalogue
+              </p>
+            )}
 
             {/* Cost Detail Toggle */}
             <button
