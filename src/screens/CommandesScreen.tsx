@@ -12,6 +12,7 @@ import {
   X,
   ChefHat,
   ClipboardList,
+  ChevronDown,
 } from 'lucide-react';
 import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert } from '../types';
 import { PageHeader } from '../components/PageHeader';
@@ -97,6 +98,10 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function formatDeliveryShort(iso: string) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
 function itemsSummary(items: CommandeItem[]): string {
   const merged = mergeCommandeItems(items);
   const parts = merged.map(i => `${i.dessertEmoji ? `${i.dessertEmoji} ` : ''}${i.quantity}× ${i.dessertName}`);
@@ -140,23 +145,21 @@ const BLANK: Commande = {
 
 const NOTES_CHECKLIST_MAX_ROWS = 20;
 
-/** Checklist type Rappels : une ligne par unité, rond à gauche, infos à droite. */
+/** Checklist type Rappels : rond à gauche, nom client + détail à droite (le dessert est dans l’en-tête du groupe). */
 function NotesChecklistUnits({
   quantity,
   produced,
   onChange,
   disabled,
-  emoji,
-  dessertName,
-  clientLine,
+  clientName,
+  deliveryShort,
 }: {
   quantity: number;
   produced: number;
   onChange: (n: number) => void;
   disabled?: boolean;
-  emoji: string;
-  dessertName: string;
-  clientLine: string;
+  clientName: string;
+  deliveryShort: string;
 }) {
   const q = Math.max(0, Math.floor(quantity));
   const p = Math.min(q, Math.max(0, Math.floor(produced)));
@@ -164,26 +167,34 @@ function NotesChecklistUnits({
 
   if (q > NOTES_CHECKLIST_MAX_ROWS) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-gourmand-border bg-white px-2 py-1.5" role="group">
-        <button
-          type="button"
-          disabled={disabled || p <= 0}
-          onClick={() => onChange(Math.max(0, p - 1))}
-          className="min-h-11 min-w-11 rounded-lg text-lg font-medium text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-          aria-label="Moins une unité prête"
-        >
-          −
-        </button>
-        <span className="flex-1 text-center text-sm font-semibold tabular-nums text-gourmand-chocolate">{p}/{q}</span>
-        <button
-          type="button"
-          disabled={disabled || p >= q}
-          onClick={() => onChange(Math.min(q, p + 1))}
-          className="min-h-11 min-w-11 rounded-lg text-lg font-medium text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-          aria-label="Plus une unité prête"
-        >
-          +
-        </button>
+      <div className="rounded-lg border border-gourmand-border/80 bg-white px-3 py-2 space-y-2" role="group">
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-gourmand-chocolate truncate">{clientName}</p>
+          <p className="text-xs text-gourmand-biscuit truncate">
+            {deliveryShort} · ×{q}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={disabled || p <= 0}
+            onClick={() => onChange(Math.max(0, p - 1))}
+            className="min-h-11 min-w-11 rounded-lg text-lg font-medium text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+            aria-label="Moins une unité prête"
+          >
+            −
+          </button>
+          <span className="flex-1 text-center text-sm font-semibold tabular-nums text-gourmand-chocolate">{p}/{q}</span>
+          <button
+            type="button"
+            disabled={disabled || p >= q}
+            onClick={() => onChange(Math.min(q, p + 1))}
+            className="min-h-11 min-w-11 rounded-lg text-lg font-medium text-gourmand-chocolate hover:bg-gourmand-bg disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+            aria-label="Plus une unité prête"
+          >
+            +
+          </button>
+        </div>
       </div>
     );
   }
@@ -192,7 +203,7 @@ function NotesChecklistUnits({
     <ul
       className="overflow-hidden rounded-xl border border-gourmand-border/80 bg-white divide-y divide-gourmand-border/50"
       role="list"
-      aria-label={`${p} sur ${q} prêts`}
+      aria-label={`${clientName}, ${p} sur ${q} prêts`}
     >
       {Array.from({ length: q }, (_, i) => {
         const filled = i < p;
@@ -202,7 +213,7 @@ function NotesChecklistUnits({
               type="button"
               disabled={disabled}
               aria-pressed={filled}
-              aria-label={filled ? `Décocher après l’unité ${i + 1}` : `Cocher jusqu’à l’unité ${i + 1}`}
+              aria-label={`${clientName} — unité ${i + 1} sur ${q}`}
               onClick={() => onChange(nextProducedTap(i, p, q))}
               className={`shrink-0 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gourmand-chocolate ${
                 filled ? 'border-emerald-600 bg-emerald-500 text-white' : 'border-stone-300 bg-white'
@@ -211,19 +222,16 @@ function NotesChecklistUnits({
               {filled ? <Check size={12} strokeWidth={3} aria-hidden /> : null}
             </button>
             <div className="min-w-0 flex-1 py-2">
+              <p className="text-[15px] font-semibold text-gourmand-chocolate truncate">{clientName}</p>
               {i === 0 ? (
-                <>
-                  <p className="text-[15px] font-medium leading-snug text-gourmand-chocolate">
-                    <span className="mr-1.5" aria-hidden>
-                      {emoji}
-                    </span>
-                    {dessertName}
-                    <span className="text-gourmand-biscuit font-normal tabular-nums"> · ×{q}</span>
-                  </p>
-                  {clientLine ? <p className="text-xs text-gourmand-biscuit truncate mt-0.5">{clientLine}</p> : null}
-                </>
+                <p className="text-xs text-gourmand-biscuit truncate mt-0.5">
+                  {deliveryShort}
+                  <span className="tabular-nums"> · ×{q}</span>
+                </p>
               ) : (
-                <p className="text-[13px] text-gourmand-biscuit/50 tabular-nums">{i + 1}/{q}</p>
+                <p className="text-xs text-gourmand-biscuit tabular-nums mt-0.5">
+                  {i + 1}/{q}
+                </p>
               )}
             </div>
           </li>
@@ -244,6 +252,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   const [notifPerm, setNotifPerm] = useState<ReturnType<typeof getNotificationPermission>>(getNotificationPermission);
   const [deliverTarget, setDeliverTarget] = useState<Commande | null>(null);
   const [converting, setConverting] = useState(false);
+  /** Clés de groupe dessert repliés dans l’onglet Cuisine (absent = déplié). */
+  const [kitchenCollapsedKeys, setKitchenCollapsedKeys] = useState<Set<string>>(() => new Set());
 
   const filtered = useMemo(() => {
     const list = filter === 'all' ? commandes : commandes.filter(c => c.status === filter);
@@ -722,40 +732,58 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                 const remaining = lines.reduce((s, l) => s + (l.item.quantity - clampProducedQty(l.item)), 0);
                 const total = lines.reduce((s, l) => s + l.item.quantity, 0);
                 const done = total - remaining;
+                const expanded = !kitchenCollapsedKeys.has(key);
                 return (
-                  <div key={key} className="gourmand-card border p-3 rounded-2xl space-y-3">
-                    <div className="flex items-center gap-2 min-w-0 pb-2 border-b border-gourmand-border/60">
+                  <div key={key} className="gourmand-card border rounded-2xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setKitchenCollapsedKeys(prev => {
+                          const next = new Set(prev);
+                          if (next.has(key)) next.delete(key);
+                          else next.add(key);
+                          return next;
+                        })
+                      }
+                      className="flex w-full items-center gap-2 min-w-0 p-3 text-left cursor-pointer transition-colors hover:bg-gourmand-bg/50 active:bg-gourmand-bg/80"
+                      aria-expanded={expanded}
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`shrink-0 text-gourmand-biscuit transition-transform duration-200 ${expanded ? 'rotate-0' : '-rotate-90'}`}
+                        aria-hidden
+                      />
                       <span className="text-xl shrink-0" aria-hidden>
                         {emoji}
                       </span>
-                      <h3 className="text-[15px] font-bold text-gourmand-chocolate truncate flex-1">{name}</h3>
+                      <h3 className="text-[15px] font-bold text-gourmand-chocolate truncate flex-1 min-w-0">{name}</h3>
                       <span className="text-xs font-semibold tabular-nums text-gourmand-biscuit shrink-0">
                         {done}/{total}
                       </span>
-                    </div>
-                    <ul className="space-y-4">
-                      {lines.map(line => {
-                        const cmd = commandes.find(c => c.id === line.commandeId);
-                        if (!cmd) return null;
-                        const p = clampProducedQty(line.item);
-                        const q = line.item.quantity;
-                        const clientLine = `${line.clientName} · ${formatDate(line.deliveryDate)}`;
-                        return (
-                          <li key={`${line.commandeId}-${line.itemIndex}`}>
-                            <NotesChecklistUnits
-                              quantity={q}
-                              produced={p}
-                              emoji={line.item.dessertEmoji || emoji}
-                              dessertName={name}
-                              clientLine={clientLine}
-                              onChange={async n => {
-                                await patchCommandeItem(cmd, line.itemIndex, { producedQty: n });
-                              }}
-                            />
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    </button>
+                    {expanded && (
+                      <ul className="space-y-3 px-3 pb-3 pt-0 border-t border-gourmand-border/50">
+                        {lines.map(line => {
+                          const cmd = commandes.find(c => c.id === line.commandeId);
+                          if (!cmd) return null;
+                          const p = clampProducedQty(line.item);
+                          const q = line.item.quantity;
+                          return (
+                            <li key={`${line.commandeId}-${line.itemIndex}`}>
+                              <NotesChecklistUnits
+                                quantity={q}
+                                produced={p}
+                                clientName={line.clientName}
+                                deliveryShort={formatDeliveryShort(line.deliveryDate)}
+                                onChange={async n => {
+                                  await patchCommandeItem(cmd, line.itemIndex, { producedQty: n });
+                                }}
+                              />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
                 );
               })}
