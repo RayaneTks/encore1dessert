@@ -467,11 +467,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
           { emphasis: cmd.clientName.trim() || 'Commande' },
         );
       } else if (cmd.status === 'ready' && !commandeProductionComplete(candid)) {
-        await persistCommande(
-          { ...cmd, items: merged, status: 'pending' },
-          'Repasse en attente (cuisine)',
-          { emphasis: cmd.clientName.trim() || 'Commande' },
-        );
+        await persistCommande({ ...cmd, items: merged, status: 'pending' }, 'Repasse en attente (cuisine)');
       } else {
         await persistCommande({ ...cmd, items: merged });
       }
