@@ -24,6 +24,38 @@ export function normalizeCommandeItems(items: CommandeItem[]): CommandeItem[] {
   return items.map(normalizeCommandeItem);
 }
 
+/**
+ * Fusionne les lignes du même dessert (même id ou même nom) : une seule ligne avec quantité totale
+ * et production cumulée (somme des unités déjà cochées, plafonnée au total).
+ */
+export function mergeCommandeItems(items: CommandeItem[]): CommandeItem[] {
+  const valid = items.filter(i => i.dessertName.trim());
+  const groups = new Map<string, CommandeItem[]>();
+  for (const it of valid) {
+    const k = productionKey(it);
+    if (!k) continue;
+    const g = groups.get(k) ?? [];
+    g.push(it);
+    groups.set(k, g);
+  }
+  const out: CommandeItem[] = [];
+  for (const [, group] of groups) {
+    const totalQ = group.reduce((s, x) => s + Math.max(0, Math.floor(x.quantity)), 0);
+    const sumP = group.reduce((s, x) => s + clampProducedQty(x), 0);
+    const totalP = Math.min(Math.max(0, totalQ), sumP);
+    const ref = group[0];
+    out.push(
+      normalizeCommandeItem({
+        ...ref,
+        quantity: Math.max(1, totalQ || 1),
+        producedQty: totalP,
+      }),
+    );
+  }
+  out.sort((a, b) => a.dessertName.localeCompare(b.dessertName, 'fr'));
+  return out;
+}
+
 /** Lignes de production : commandes encore à préparer (hors livrées). */
 export function activeProductionCommandes(commandes: Commande[]): Commande[] {
   return commandes.filter(c => c.status !== 'delivered');
@@ -106,3 +138,6 @@ export function dessertLabelForKey(key: string, lines: KitchenGroupedLine[]): { 
     emoji: first?.dessertEmoji?.trim() || '🍰',
   };
 }
+
+/** Au-delà de ce nombre d’unités, l’UI cuisine utilise un compteur +/- au lieu d’une rangée de cercles. */
+export const KITCHEN_UNIT_CIRCLES_MAX = 10;
