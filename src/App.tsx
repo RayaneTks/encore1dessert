@@ -9,7 +9,7 @@ import {
   Commande,
   ToastData,
   ShowToastOptions,
-  BundleOfferConfig,
+  BundleOfferRule,
 } from './types';
 import {
   calculateDessertCost,
@@ -17,7 +17,17 @@ import {
 } from './lib/calculations';
 import * as db from './lib/db';
 import { checkAndFireNotifications, syncAllNotifications } from './lib/notifications';
-import { loadBundleOffer, saveBundleOffer, effectiveAverageUnitPrice, computeBundleLineTotal } from './lib/bundleOffer';
+import { buildCommandeSaleAllocations } from './lib/deliveryBundle';
+import {
+  loadBundleRules,
+  saveBundleRules,
+  effectiveAverageUnitPrice,
+  computeBundleLineTotal,
+  formatRevenueLineCaption,
+  formatBundleOfferLabel,
+  unitRevenueListForBundle,
+  resolveRuleForDessert,
+} from './lib/bundleOffer';
 
 import { BottomNav } from './components/BottomNav';
 import { Toast } from './components/Toast';
@@ -46,7 +56,7 @@ export default function App() {
     const s = localStorage.getItem('e1d_target_margin');
     return s ? parseFloat(s) : 0.65;
   });
-  const [bundleOffer, setBundleOffer] = useState<BundleOfferConfig>(() => loadBundleOffer());
+  const [bundleRules, setBundleRules] = useState<BundleOfferRule[]>(() => loadBundleRules());
 
   // ─── Toast ─────────────────────────────────────────────────
   const showToast = useCallback(
@@ -177,26 +187,65 @@ export default function App() {
     dessert: Dessert,
     quantity: number,
     customerType: 'particulier' | 'pro',
-    overridePrice?: number
+    options?: {
+      overridePrice?: number;
+      orderGroupId?: string;
+      sourceCommandeId?: string | null;
+      /** C.A. et PU déjà calculés (ex. offre sur quantité groupée) — jamais recalculé, même si l’offre change ensuite. */
+      frozenRevenue?: { totalRevenue: number; unitPrice: number };
+      /** Légende ex. « 1 × 3,00 + 1 × 3,60 » (commande) ; sinon calculé à l’encaissement. */
+      revenueCaption?: string;
+      /** Libellé d’offre (commande / caisse) ; prioritaire s’il est fourni. */
+      bundleOfferLabelAtSale?: string;
+    },
   ) => {
     const unitCost = calculateDessertCost(dessert, ingredients, bases);
     const basePrice = customerType === 'pro' ? dessert.sellPricePro : dessert.sellPriceParticulier;
+    const o = options?.overridePrice;
     const catalogueUnit =
-      overridePrice !== undefined && overridePrice !== null && Number.isFinite(overridePrice)
-        ? overridePrice
-        : basePrice;
-    const totalRevenue = computeBundleLineTotal(quantity, catalogueUnit, bundleOffer, customerType);
-    const unitPrice = effectiveAverageUnitPrice(quantity, catalogueUnit, bundleOffer, customerType);
+      o !== undefined && o !== null && Number.isFinite(o) ? o : basePrice;
+    const fr = options?.frozenRevenue;
+    const rule = resolveRuleForDessert(dessert, customerType, bundleRules);
+    const totalRevenue = fr
+      ? fr.totalRevenue
+      : computeBundleLineTotal(quantity, catalogueUnit, rule, customerType, dessert.productKind);
+    const unitPrice = fr
+      ? fr.unitPrice
+      : effectiveAverageUnitPrice(
+          quantity,
+          catalogueUnit,
+          rule,
+          customerType,
+          dessert.productKind,
+        );
     const totalCost = unitCost * quantity;
     const totalProfit = totalRevenue - totalCost;
     const marginRate = totalRevenue > 0 ? totalProfit / totalRevenue : 0;
     const linesSnapshot = createFullSnapshot(dessert, ingredients, bases);
+    const orderGroupId = options?.orderGroupId ?? crypto.randomUUID();
+    const sourceCommandeId = options?.sourceCommandeId ?? null;
+    const revenueCaption =
+      options?.revenueCaption?.trim() ||
+      formatRevenueLineCaption(
+        unitRevenueListForBundle(quantity, catalogueUnit, rule, customerType, dessert.productKind),
+      );
+    const catTotal = catalogueUnit * quantity;
+    const offerLabelFromOpts = options?.bundleOfferLabelAtSale;
+    const autoOfferLabel =
+      !fr && rule && Math.abs(totalRevenue - catTotal) > 0.01
+        ? formatBundleOfferLabel(rule)
+        : '';
+    const bundleOfferLabelAtSale =
+      offerLabelFromOpts !== undefined && offerLabelFromOpts !== null
+        ? offerLabelFromOpts
+        : autoOfferLabel;
 
     try {
       const saved = await db.insertHistoryEntry({
         dessertId: dessert.id,
         dessertName: dessert.name,
         dessertEmoji: dessert.emoji,
+        productKind: dessert.productKind,
         quantitySold: quantity,
         unitCost,
         unitPrice,
@@ -206,13 +255,46 @@ export default function App() {
         marginRate,
         customerType,
         linesSnapshot,
+        orderGroupId,
+        sourceCommandeId,
+        catalogueUnitAtSale: catalogueUnit,
+        revenueCaption,
+        bundleOfferLabelAtSale,
       });
       setHistory(prev => [saved, ...prev]);
     } catch (err: any) {
       console.error(err);
       showToast(err.message || 'Erreur lors de l\'enregistrement', 'error');
     }
-  }, [ingredients, bases, bundleOffer, showToast]);
+  }, [ingredients, bases, bundleRules, showToast]);
+
+  const checkoutCart = useCallback(
+    async (
+      lines: { dessertId: string; quantity: number; catalogueUnitOverride?: number }[],
+      customerType: 'particulier' | 'pro',
+    ) => {
+      if (lines.length === 0) return;
+      const orderGroupId = crypto.randomUUID();
+      const { lines: allocRows, skippedLines } = buildCommandeSaleAllocations(
+        lines,
+        id => desserts.find(d => d.id === id),
+        customerType,
+        bundleRules,
+      );
+      for (const row of allocRows) {
+        await addHistoryEntry(row.dessert, row.quantity, customerType, {
+          orderGroupId,
+          sourceCommandeId: null,
+          frozenRevenue: row.frozenRevenue,
+          revenueCaption: row.revenueCaption,
+          bundleOfferLabelAtSale: row.bundleOfferLabelAtSale,
+          overridePrice: row.catalogueUnitAtSale,
+        });
+      }
+      if (skippedLines > 0) showToast(`${skippedLines} article(s) ignoré(s) — recette manquante`, 'info');
+    },
+    [addHistoryEntry, bundleRules, desserts, showToast],
+  );
 
   const handleDeleteHistory = useCallback(async (id: string) => {
     try {
@@ -223,6 +305,19 @@ export default function App() {
       showToast(err.message || 'Erreur lors de la suppression', 'error');
     }
   }, [showToast]);
+
+  const handleDeleteHistoryByOrderGroup = useCallback(
+    async (orderGroupId: string) => {
+      try {
+        await db.deleteHistoryByOrderGroupId(orderGroupId);
+        setHistory(prev => prev.filter(h => h.orderGroupId !== orderGroupId));
+      } catch (err: any) {
+        console.error(err);
+        showToast(err.message || 'Erreur lors de la suppression', 'error');
+      }
+    },
+    [showToast],
+  );
 
   // Commandes
   const handleSaveCommande = useCallback(async (cmd: Commande) => {
@@ -248,9 +343,9 @@ export default function App() {
     setTargetMargin(val);
   }, []);
 
-  const handleChangeBundleOffer = useCallback((config: BundleOfferConfig) => {
-    saveBundleOffer(config);
-    setBundleOffer(config);
+  const handleChangeBundleRules = useCallback((rules: BundleOfferRule[]) => {
+    saveBundleRules(rules);
+    setBundleRules(rules);
   }, []);
 
   const handleDeleteCommande = useCallback(async (id: string) => {
@@ -304,9 +399,8 @@ export default function App() {
                 bases={bases}
                 commandes={commandes}
                 setActiveTab={setActiveTab}
-                targetMargin={targetMargin}
-                bundleOffer={bundleOffer}
-                onValidate={addHistoryEntry}
+                bundleRules={bundleRules}
+                onCheckoutCart={checkoutCart}
                 showToast={showToast}
               />
             )}
@@ -347,6 +441,7 @@ export default function App() {
                 commandes={commandes}
                 setActiveTab={setActiveTab}
                 onDelete={handleDeleteHistory}
+                onDeleteOrderGroup={handleDeleteHistoryByOrderGroup}
                 showToast={showToast}
               />
             )}
@@ -355,6 +450,7 @@ export default function App() {
                 key="commandes"
                 commandes={commandes}
                 desserts={desserts}
+                bundleRules={bundleRules}
                 onSave={handleSaveCommande}
                 onDelete={handleDeleteCommande}
                 onAddSale={addHistoryEntry}
@@ -366,8 +462,9 @@ export default function App() {
                 key="settings"
                 targetMargin={targetMargin}
                 onChangeTargetMargin={handleChangeTargetMargin}
-                bundleOffer={bundleOffer}
-                onChangeBundleOffer={handleChangeBundleOffer}
+                desserts={desserts}
+                bundleRules={bundleRules}
+                onChangeBundleRules={handleChangeBundleRules}
               />
             )}
           </AnimatePresence>

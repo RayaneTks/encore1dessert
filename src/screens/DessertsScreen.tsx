@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Trash2, ChevronDown, Beaker, Apple, ChefHat } from 'lucide-react';
-import { Dessert, RawIngredient, Base } from '../types';
+import { Dessert, RawIngredient, Base, DessertProductKind, DESSERT_PRODUCT_KIND_OPTIONS } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -41,11 +41,13 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
   const [sellPricePro, setSellPricePro] = useState('');
   const [servings, setServings] = useState('8');
   const [notes, setNotes] = useState('');
+  const [productKind, setProductKind] = useState<DessertProductKind>('tarte');
   const [compMap, setCompMap] = useState<Record<string, { type: 'ingredient' | 'base'; qty: number }>>({});
 
   const openAdd = () => {
     setEditItem(null);
     setName(''); setEmoji('🍰'); setSellPriceParticulier(''); setSellPricePro(''); setServings('8'); setNotes('');
+    setProductKind('tarte');
     setCompMap({});
     setShowForm(true);
   };
@@ -57,6 +59,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
     setSellPriceParticulier(d.sellPriceParticulier.toString());
     setSellPricePro(d.sellPricePro.toString());
     setServings(d.servings.toString());
+    setProductKind(d.productKind ?? 'tarte');
     setNotes(d.notes);
     const map: Record<string, { type: 'ingredient' | 'base'; qty: number }> = {};
     d.components.forEach(c => { map[c.id] = { type: c.type, qty: c.quantity }; });
@@ -87,6 +90,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
       sellPriceParticulier: sellPriceParticulierVal,
       sellPricePro: sellPriceProVal,
       servings: servingsVal,
+      productKind,
       notes, components,
       createdAt: editItem?.createdAt || new Date().toISOString(),
     };
@@ -184,7 +188,11 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                   <span className="text-2xl">{d.emoji}</span>
                   <div>
                     <p className="font-semibold text-base text-gourmand-chocolate">{d.name}</p>
-                    <p className="text-[11px] font-medium text-gourmand-biscuit flex items-center gap-1.5 mt-0.5">
+                    <p className="text-[11px] font-medium text-gourmand-biscuit flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="rounded-md bg-gourmand-bg px-1.5 py-0.5 text-[10px] font-semibold text-gourmand-cocoa">
+                        {DESSERT_PRODUCT_KIND_OPTIONS.find(k => k.value === (d.productKind ?? 'tarte'))?.label ?? d.productKind}
+                      </span>
+                      <span className="w-1 h-1 rounded-full bg-gourmand-border" />
                       {d.servings} parts <span className="w-1 h-1 rounded-full bg-gourmand-border" /> Coeff ×{coeff.toFixed(1)}
                     </p>
                   </div>
@@ -309,6 +317,19 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                       <FormLabel>Nom du produit</FormLabel>
                       <input placeholder="Ex: Tarte Citron" className="gourmand-input w-full text-base" value={name} onChange={e => setName(e.target.value)} />
                     </div>
+                  </div>
+                  <div>
+                    <FormLabel>Famille de produit</FormLabel>
+                    <select
+                      className="gourmand-input w-full text-base"
+                      value={productKind}
+                      onChange={e => setProductKind(e.target.value as DessertProductKind)}
+                    >
+                      {DESSERT_PRODUCT_KIND_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label} — {o.hint}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gourmand-biscuit mt-1.5">L’offre lot s’applique aux familles cochées dans Réglages (par défaut : tarte).</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex-1">

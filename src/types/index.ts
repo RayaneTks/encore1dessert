@@ -37,6 +37,16 @@ export interface DessertComponent {
   quantity: number;          // en grammes
 }
 
+/** Famille de produit (offres lot, stats, compta). Chaque recette a une seule famille. */
+export type DessertProductKind = 'tarte' | 'flan' | 'tiramisu' | 'autre';
+
+export const DESSERT_PRODUCT_KIND_OPTIONS: { value: DessertProductKind; label: string; hint: string }[] = [
+  { value: 'tarte', label: 'Tarte', hint: 'Offre lot 5+… paramétrable' },
+  { value: 'flan', label: 'Flan', hint: 'Tarif classique' },
+  { value: 'tiramisu', label: 'Tiramisu', hint: 'Tarif classique' },
+  { value: 'autre', label: 'Autre', hint: 'Pâtisseries diverses' },
+];
+
 export interface Dessert {
   id: string;
   name: string;
@@ -45,6 +55,7 @@ export interface Dessert {
   sellPriceParticulier: number; // Prix de vente Particulier
   sellPricePro: number;         // Prix de vente Pro
   servings: number;          // Nombre de parts
+  productKind: DessertProductKind;
   notes: string;
   createdAt: string;
 }
@@ -65,6 +76,7 @@ export interface HistoryEntry {
   dessertId: string;
   dessertName: string;
   dessertEmoji: string;
+  productKind: DessertProductKind;
   quantitySold: number;
   unitCost: number;          // Coût de revient unitaire figé
   unitPrice: number;         // Prix de vente unitaire figé
@@ -73,7 +85,17 @@ export interface HistoryEntry {
   totalCost: number;
   totalProfit: number;
   marginRate: number;        // % marge
+  /** Prix unitaire catalogue (avant offre) figé — sert à afficher le détail 5×3 € + reliquat, etc. */
+  catalogueUnitAtSale: number;
+  /** Légende figée, ex. « 5 × 3,00 € + 1 × 3,60 € » (ordre de la commande pour les lots). */
+  revenueCaption: string;
+  /** Libellé d’offre figé, ex. « Offre lot 5 p. = 15,00 € ». Vide = tarif catalogue (pas d’offre). */
+  bundleOfferLabelAtSale: string;
   linesSnapshot: SnapshotLine[];  // Détail figé complet
+  /** Même id pour toutes les lignes d'un même encaissement (caisse ou livraison). */
+  orderGroupId: string;
+  /** Si la vente vient d’une commande client (livrée). */
+  sourceCommandeId: string | null;
 }
 
 // ─── Commandes Client ──────────────────────────────────────
@@ -104,21 +126,25 @@ export interface Commande {
 
 // ─── Offre lot (caisse) — stockée en localStorage ──────────
 /**
- * Offre « lot » à la caisse.
- * - Sans forfait : chaque lot complet = (bundleSize − 1) × prix catalogue + `discountedUnitPrice`.
- * - Avec forfait : chaque lot complet = `fixedBundleTotal` (ex. 15 € pour 5 tartes), le reste au prix catalogue.
+ * Une règle d’offre lot. Ordre du tableau = priorité (première règle qui matche s’applique).
+ * Périmètre : **union** de `dessertIds` (sélection explicite) et `productKinds` (familles). Au moins l’un
+ * des deux doit être non vide pour qu’il y ait des produits concernés.
  */
-export interface BundleOfferConfig {
+export interface BundleOfferRule {
+  id: string;
+  /** Nom optionnel (compta, réglages). */
+  name: string;
   enabled: boolean;
   bundleSize: number;
-  /** Prix de la dernière unité de chaque lot (ex. 1 €) si `useFixedBundleTotal` est false. */
+  /** Prix de la dernière unité de chaque lot si `useFixedBundleTotal` est false. */
   discountedUnitPrice: number;
-  /** Si true : `fixedBundleTotal` € par lot complet de `bundleSize` unités, puis reliquat au catalogue. */
   useFixedBundleTotal: boolean;
-  /** Total TTC d’un lot complet (ex. 15 pour 5 × 3 € moyen). Ignoré si `useFixedBundleTotal` est false. */
   fixedBundleTotal: number;
-  /** Particulier, Pro, ou les deux */
   appliesTo: 'particulier' | 'pro' | 'both';
+  /** Desserts explicitement concernés. */
+  dessertIds: string[];
+  /** Familles concernées. Union avec `dessertIds`. */
+  productKinds: DessertProductKind[];
 }
 
 // ─── Stats ─────────────────────────────────────────────────

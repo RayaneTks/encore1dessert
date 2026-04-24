@@ -1,22 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, TrendingUp, Check, Calculator, Clock } from 'lucide-react';
-import { Dessert, RawIngredient, Base, Commande, Tab, BundleOfferConfig } from '../types';
-import { PageHeader } from '../components/PageHeader';
-import { SectionCard } from '../components/SectionCard';
-import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow } from '../components/FilterControls';
+import { ChevronRight, Check, Calculator, Clock, Minus, Plus, Search, ShoppingBag, Banknote, Trash2, Pencil } from 'lucide-react';
 import {
-  fmt,
-  calculateDessertCost,
-  resolveComponentName,
-  resolveComponentEmoji,
-  resolveComponentUnit,
-  findIngredient,
-  findBase,
-  calculateBaseCostPerKg,
-  createFullSnapshot,
-} from '../lib/calculations';
-import { computeBundleLineTotal } from '../lib/bundleOffer';
+  Dessert,
+  RawIngredient,
+  Base,
+  Commande,
+  Tab,
+  BundleOfferRule,
+  DessertProductKind,
+  DESSERT_PRODUCT_KIND_OPTIONS,
+} from '../types';
+import { PageHeader } from '../components/PageHeader';
+import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow } from '../components/FilterControls';
+import { fmt, calculateDessertCost } from '../lib/calculations';
+import { buildCommandeSaleAllocations } from '../lib/deliveryBundle';
+import { formatBundleOfferLabel, resolveRuleForDessert } from '../lib/bundleOffer';
+
+type CartLine = { id: string; dessertId: string; quantity: number; priceOverride: string };
 
 interface Props {
   desserts: Dessert[];
@@ -24,10 +25,28 @@ interface Props {
   bases: Base[];
   commandes: Commande[];
   setActiveTab: (tab: Tab) => void;
-  targetMargin: number;
-  bundleOffer: BundleOfferConfig;
-  onValidate: (dessert: Dessert, quantity: number, customerType: 'particulier' | 'pro', overridePrice?: number) => void;
+  bundleRules: BundleOfferRule[];
+  onCheckoutCart: (
+    lines: { dessertId: string; quantity: number; catalogueUnitOverride?: number }[],
+    customerType: 'particulier' | 'pro',
+  ) => void | Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+}
+
+function parsePositiveInt(raw: string, min: number): number {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < min) return min;
+  return Math.min(5000, n);
+}
+
+function newLineId(): string {
+  return `line-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+const KIND_SHELF_ORDER: DessertProductKind[] = ['tarte', 'flan', 'tiramisu', 'autre'];
+
+function labelForProductKind(kind: DessertProductKind): string {
+  return DESSERT_PRODUCT_KIND_OPTIONS.find(o => o.value === kind)?.label ?? 'Autre';
 }
 
 export const CalculateScreen: React.FC<Props> = ({
@@ -36,107 +55,189 @@ export const CalculateScreen: React.FC<Props> = ({
   bases,
   commandes,
   setActiveTab,
-  targetMargin,
-  bundleOffer,
-  onValidate,
+  bundleRules,
+  onCheckoutCart,
   showToast,
 }) => {
-  const [selectedId, setSelectedId] = useState<string>(desserts[0]?.id || '');
-  const [qty, setQty] = useState(1);
-  const [showDetail, setShowDetail] = useState(false);
-  const [priceOverride, setPriceOverride] = useState('');
+  const searchId = useId();
+  const [search, setSearch] = useState('');
   const [customerType, setCustomerType] = useState<'particulier' | 'pro'>('particulier');
-  const [validated, setValidated] = useState(false);
-
-  const selected = desserts.find(d => d.id === selectedId);
-  const cost = selected ? calculateDessertCost(selected, ingredients, bases) : 0;
-  const selectedBasePrice = selected
-    ? (customerType === 'pro' ? selected.sellPricePro : selected.sellPriceParticulier)
-    : 0;
-  const catalogueUnit = priceOverride ? parseFloat(priceOverride) : selectedBasePrice;
-  const catalogueOk = Number.isFinite(catalogueUnit) && catalogueUnit >= 0;
-  const unitForBundle = catalogueOk ? catalogueUnit : selectedBasePrice;
-  const lineTotal = computeBundleLineTotal(qty, unitForBundle, bundleOffer, customerType);
-  const effectiveUnit = qty > 0 ? lineTotal / qty : 0;
-  const margin = effectiveUnit - cost;
-  const marginRate = effectiveUnit > 0 ? margin / effectiveUnit : 0;
-  const coeff = cost > 0 ? effectiveUnit / cost : 0;
-  const suggestedPrice = cost > 0 && targetMargin < 1 ? cost / (1 - targetMargin) : null;
-
-  const bundleApplies =
-    bundleOffer.enabled &&
-    qty >= bundleOffer.bundleSize &&
-    (bundleOffer.appliesTo === 'both' ||
-      (bundleOffer.appliesTo === 'particulier' && customerType === 'particulier') ||
-      (bundleOffer.appliesTo === 'pro' && customerType === 'pro')) &&
-    Math.abs(lineTotal - unitForBundle * qty) > 0.001;
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [checkoutDone, setCheckoutDone] = useState(false);
+  const [editingPriceFor, setEditingPriceFor] = useState<string | null>(null);
+  const [priceDraft, setPriceDraft] = useState('');
 
   const todayISO = new Date().toISOString().split('T')[0];
   const todayCommandes = commandes.filter(c => c.deliveryDate === todayISO && c.status !== 'delivered');
 
-  // Resolved component lines for the detail view
-  const lines = useMemo(() => {
-    if (!selected) return [];
-    return selected.components.map(comp => {
-      const name = resolveComponentName(comp.type, comp.id, ingredients, bases);
-      const emoji = resolveComponentEmoji(comp.type, comp.id, ingredients, bases);
-      const unit = resolveComponentUnit(comp.type, comp.id, ingredients);
-      let lineCost = 0;
-      if (comp.type === 'ingredient') {
-        const ing = findIngredient(ingredients, comp.id);
-        if (ing) lineCost = ing.unit === 'u' ? ing.pricePerKg * comp.quantity : (ing.pricePerKg * comp.quantity) / 1000;
-      } else {
-        const base = findBase(bases, comp.id);
-        if (base) lineCost = (calculateBaseCostPerKg(base, ingredients) * comp.quantity) / 1000;
-      }
-      return { name, emoji, type: comp.type, quantity: comp.quantity, unit, lineCost };
-    });
-  }, [selected, ingredients, bases]);
+  const q = search.trim().toLowerCase();
+  const filteredDesserts = useMemo(
+    () => (!q ? desserts : desserts.filter(d => d.name.toLowerCase().includes(q))),
+    [desserts, q],
+  );
 
-  const handleValidate = () => {
-    if (!selected) return;
-    onValidate(selected, qty, customerType, priceOverride ? parseFloat(priceOverride) : undefined);
-    setValidated(true);
-    showToast(`${qty}× ${selected.name} enregistré (${customerType === 'pro' ? 'Pro' : 'Particulier'}).`);
-    setTimeout(() => {
-      setQty(1);
-      setPriceOverride('');
-      setValidated(false);
-      setShowDetail(false);
-    }, 2000);
+  /** Fiches triées par famille (Tarte, Flan, …) pour scanner vite une longue liste. */
+  const dessertBlocks = useMemo(() => {
+    const map = new Map<DessertProductKind, Dessert[]>();
+    for (const d of filteredDesserts) {
+      const k = d.productKind ?? 'autre';
+      const arr = map.get(k);
+      if (arr) arr.push(d);
+      else map.set(k, [d]);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+    }
+    return KIND_SHELF_ORDER.filter(k => (map.get(k)?.length ?? 0) > 0).map(k => ({
+      kind: k,
+      title: labelForProductKind(k),
+      items: map.get(k)!,
+    }));
+  }, [filteredDesserts]);
+
+  const catalogFor = useCallback(
+    (d: Dessert) => (customerType === 'pro' ? d.sellPricePro : d.sellPriceParticulier),
+    [customerType],
+  );
+
+  const { totalRevenue, totalMargin, lineAmounts, offerHints } = useMemo(() => {
+    if (cart.length === 0) {
+      return { totalRevenue: 0, totalMargin: 0, lineAmounts: [] as number[], offerHints: [] as (string | null)[] };
+    }
+    const { lines: alloc } = buildCommandeSaleAllocations(
+      cart.map(c => {
+        const o = c.priceOverride ? parseFloat(c.priceOverride) : undefined;
+        return {
+          dessertId: c.dessertId,
+          quantity: c.quantity,
+          catalogueUnitOverride:
+            o !== undefined && Number.isFinite(o) && o >= 0 ? o : undefined,
+        };
+      }),
+      id => desserts.find(d => d.id === id),
+      customerType,
+      bundleRules,
+    );
+    const amounts: number[] = [];
+    const hints: (string | null)[] = [];
+    let rev = 0;
+    let m = 0;
+    for (let i = 0; i < cart.length; i++) {
+      const row = alloc[i];
+      if (!row) {
+        amounts.push(0);
+        hints.push(null);
+        continue;
+      }
+      const tr = row.frozenRevenue.totalRevenue;
+      amounts.push(tr);
+      const d = row.dessert;
+      const uc = calculateDessertCost(d, ingredients, bases);
+      m += tr - uc * row.quantity;
+      rev += tr;
+      const o = cart[i].priceOverride ? parseFloat(cart[i].priceOverride) : undefined;
+      const pCat = o !== undefined && Number.isFinite(o) && o >= 0 ? o : catalogFor(d);
+      const r = resolveRuleForDessert(d, customerType, bundleRules);
+      hints.push(r && Math.abs(tr - pCat * row.quantity) > 0.01 ? formatBundleOfferLabel(r) : null);
+    }
+    return { totalRevenue: rev, totalMargin: m, lineAmounts: amounts, offerHints: hints };
+  }, [cart, customerType, bundleRules, desserts, ingredients, bases, catalogFor]);
+
+  const addOne = useCallback(
+    (dessertId: string) => {
+      setCart(prev => {
+        const ix = prev.findIndex(l => l.dessertId === dessertId && l.priceOverride.trim() === '');
+        if (ix >= 0) {
+          const n = [...prev];
+          n[ix] = { ...n[ix], quantity: n[ix].quantity + 1 };
+          return n;
+        }
+        return [...prev, { id: newLineId(), dessertId, quantity: 1, priceOverride: '' }];
+      });
+    },
+    [setCart],
+  );
+
+  const setQty = useCallback((lineId: string, qty: number) => {
+    if (qty < 1) {
+      setCart(c => c.filter(x => x.id !== lineId));
+      return;
+    }
+    setCart(c => c.map(x => (x.id === lineId ? { ...x, quantity: qty } : x)));
+  }, []);
+
+  const applyPriceEdit = (lineId: string) => {
+    const v = priceDraft.replace(',', '.').trim();
+    if (v === '') {
+      setCart(c => c.map(x => (x.id === lineId ? { ...x, priceOverride: '' } : x)));
+    } else {
+      const p = parseFloat(v);
+      if (Number.isFinite(p) && p >= 0) {
+        setCart(c => c.map(x => (x.id === lineId ? { ...x, priceOverride: p.toFixed(2) } : x)));
+      } else {
+        showToast('Prix invalide', 'error');
+        return;
+      }
+    }
+    setEditingPriceFor(null);
+    setPriceDraft('');
   };
 
-  const marginColor = marginRate >= 0.6 ? 'text-emerald-400' : marginRate >= 0.4 ? 'text-amber-400' : 'text-red-400';
+  const startPriceEdit = (line: CartLine) => {
+    setEditingPriceFor(line.id);
+    setPriceDraft(line.priceOverride || '');
+  };
 
-  const plainTotal = unitForBundle * qty;
-  const bundleSaving = bundleApplies ? Math.max(0, plainTotal - lineTotal) : 0;
+  const handleCheckout = useCallback(async () => {
+    if (cart.length === 0) return;
+    await onCheckoutCart(
+      cart.map(c => {
+        const o = c.priceOverride ? parseFloat(c.priceOverride) : undefined;
+        return {
+          dessertId: c.dessertId,
+          quantity: c.quantity,
+          catalogueUnitOverride:
+            c.priceOverride.trim() && o !== undefined && Number.isFinite(o) && o >= 0 ? o : undefined,
+        };
+      }),
+      customerType,
+    );
+    setCart([]);
+    setCheckoutDone(true);
+    setSearch('');
+    showToast('Vente enregistrée', 'success');
+    setTimeout(() => setCheckoutDone(false), 1600);
+  }, [cart, customerType, onCheckoutCart, showToast]);
 
   if (desserts.length === 0) {
-     return (
-       <div className="h-full px-4 flex flex-col items-center justify-center opacity-50 pb-32">
-          <div className="w-16 h-16 rounded-full bg-gourmand-border/50 flex items-center justify-center mx-auto mb-4">
-             <Calculator size={32} className="text-gourmand-cocoa" />
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <PageHeader
+          title="Caisse"
+          description="Encaissez dès qu’au moins une recette est disponible."
+        />
+        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-32 opacity-50">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gourmand-border/50">
+            <Calculator size={32} className="text-gourmand-cocoa" />
           </div>
-          <p className="font-semibold text-lg text-gourmand-chocolate mb-1">Caisse vide</p>
-          <p className="text-sm font-medium text-gourmand-biscuit text-center">Créez d'abord des recettes pour pouvoir encaisser et calculer.</p>
-       </div>
-     );
+          <p className="mb-1 text-lg font-semibold text-gourmand-chocolate">Aucun produit</p>
+          <p className="text-center text-sm font-medium text-gourmand-biscuit">Créez des recettes pour encaisser.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.02 }}
-      className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
-    >
+    <div className="flex h-full min-h-0 flex-col">
       <PageHeader
-        title="Point de Vente"
-        description="Sélectionnez un produit et enregistrez la vente."
+        title="Caisse"
+        description="Recherche, panier, encaissement."
       />
 
-      <div className="px-4 space-y-6">
-        {/* Banner commandes du jour */}
+      <div
+        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain scrollbar-hide px-4 pb-60"
+        aria-label="Contenu caisse"
+      >
         <AnimatePresence>
           {todayCommandes.length > 0 && (
             <motion.button
@@ -144,189 +245,274 @@ export const CalculateScreen: React.FC<Props> = ({
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onClick={() => setActiveTab('commandes')}
-              className="mb-1 w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-left overflow-hidden"
+              className="mb-4 w-full flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
+              type="button"
             >
-              <Clock size={14} className="text-amber-600 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-amber-700">
-                  {todayCommandes.length} commande{todayCommandes.length > 1 ? 's' : ''} à livrer aujourd'hui
+              <Clock size={14} className="text-amber-600 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-amber-800">
+                  {todayCommandes.length} livraison{todayCommandes.length > 1 ? 's' : ''} aujourd’hui
                 </p>
-                <p className="text-xs text-amber-600/80 truncate">
-                  {todayCommandes.map(c => c.clientName).join(', ')}
-                </p>
+                <p className="truncate text-xs text-amber-700/80">{todayCommandes.map(c => c.clientName).join(', ')}</p>
               </div>
-              <ChevronRight size={14} className="text-amber-500 flex-shrink-0" />
+              <ChevronRight size={14} className="shrink-0 text-amber-500" />
             </motion.button>
           )}
         </AnimatePresence>
 
-        {/* Dessert selector */}
-        <SectionCard title="Produit à encaisser" stackClassName={todayCommandes.length > 0 ? 'pt-1' : ''}>
-          <div className="relative">
-            <select
-              className="w-full px-4 py-3 bg-white border border-gourmand-border rounded-xl font-semibold text-base focus:outline-none focus:border-gourmand-chocolate appearance-none cursor-pointer pr-12 shadow-sm text-gourmand-chocolate"
-              value={selectedId}
-              onChange={e => { setSelectedId(e.target.value); setPriceOverride(''); }}
-            >
-              {desserts.map(d => (
-                <option key={d.id} value={d.id}>{d.emoji} {d.name}</option>
-              ))}
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gourmand-biscuit">
-              <ChevronRight size={20} className="rotate-90" />
-            </div>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Type client">
+        <div className="mb-4">
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">Client</p>
           <FilterChipRow
             options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
             value={customerType}
-            onChange={v => {
-              setCustomerType(v);
-              setPriceOverride('');
-            }}
-            aria-label="Type de client pour le tarif"
+            onChange={v => setCustomerType(v)}
+            aria-label="Type de client"
           />
-        </SectionCard>
-
-        {/* Quantity + Price override */}
-        <div className="grid grid-cols-2 gap-3 items-start pt-1">
-          <SectionCard title="Quantité">
-            <div className="flex items-center justify-between">
-              <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-11 h-11 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">−</button>
-              <span className="text-3xl font-bold tracking-tight text-gourmand-chocolate">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="w-11 h-11 rounded-lg bg-gourmand-bg flex items-center justify-center font-medium text-2xl active:scale-95 transition-transform text-gourmand-chocolate">+</button>
-            </div>
-          </SectionCard>
-
-          <SectionCard title="Prix Unitaire (€)">
-            <input
-              type="number"
-              step="0.5"
-              placeholder={selectedBasePrice.toString() || '0'}
-              value={priceOverride}
-              onChange={e => setPriceOverride(e.target.value)}
-              className="w-full bg-transparent text-center text-3xl font-bold tracking-tight outline-none placeholder:text-gourmand-border text-gourmand-chocolate"
-            />
-            <p className="text-xs text-center text-gourmand-biscuit font-semibold uppercase tracking-widest mt-1">
-              {priceOverride ? 'Prix personnalisé' : 'Prix catalogue'}
-            </p>
-            {suggestedPrice !== null && (
-              <button
-                onClick={() => setPriceOverride(suggestedPrice.toFixed(2))}
-                className="gourmand-btn-secondary mt-3 w-full text-xs"
-              >
-                Suggéré {Math.round(targetMargin * 100)}% → {fmt(suggestedPrice)}
-              </button>
-            )}
-          </SectionCard>
         </div>
 
-        {/* Financial Summary */}
-        {selected && (
-          <div className="space-y-4 pt-1">
-            <div className="gourmand-card-dark p-4 relative overflow-hidden shadow-lg shadow-gourmand-chocolate/10">
-              <div className="absolute top-4 right-6 opacity-5"><TrendingUp size={56} /></div>
+        <div className="relative mb-4">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-[1.1rem] w-[1.1rem] -translate-y-1/2 text-gourmand-biscuit"
+            aria-hidden
+          />
+          <input
+            id={searchId}
+            type="search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher un produit…"
+            className="gourmand-input w-full pl-9 pr-3 text-base"
+            autoComplete="off"
+            enterKeyHint="search"
+            inputMode="search"
+          />
+        </div>
 
-              <div className="flex justify-between items-end mb-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Chiffre d'Affaire</p>
-                  <p className="text-3xl font-bold tracking-tight">{fmt(lineTotal)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Marge Brute</p>
-                  <p className={`text-2xl font-bold tracking-tight ${marginColor}`}>{fmt(lineTotal - cost * qty)}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Coût unitaire</p>
-                  <p className="font-semibold text-sm">{fmt(cost)}</p>
-                </div>
-                <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Marge unit.</p>
-                  <p className="font-semibold text-sm">{fmt(margin)}</p>
-                </div>
-                <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Taux</p>
-                  <p className={`font-semibold text-sm ${marginColor}`}>{(marginRate * 100).toFixed(0)}%</p>
-                </div>
-                <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">Coeff</p>
-                  <p className="font-semibold text-sm">×{coeff.toFixed(1)}</p>
-                </div>
-              </div>
-            </div>
-
-            {bundleSaving > 0 && (
-              <p className="text-center text-xs font-semibold text-emerald-300/90">
-                Offre lot : −{fmt(bundleSaving)} vs catalogue
-              </p>
+        {/* Panier : zone principale */}
+        <div className="mb-4 rounded-2xl border-2 border-gourmand-chocolate/15 bg-white p-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm font-bold text-gourmand-chocolate">
+              <ShoppingBag size={18} strokeWidth={2} />
+              Panier
+            </span>
+            {cart.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCart([])}
+                className="-mr-1 min-h-[44px] rounded-lg px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-red-600 active:bg-red-50"
+              >
+                Tout vider
+              </button>
             )}
-
-            {/* Cost Detail Toggle */}
-            <button
-              onClick={() => setShowDetail(!showDetail)}
-              className="w-full flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-widest text-gourmand-biscuit py-2"
-            >
-              {showDetail ? 'Masquer la composition' : 'Voir la composition'}
-              <ChevronRight size={14} className={`transition-transform duration-300 ${showDetail ? 'rotate-90' : ''}`} />
-            </button>
-
-            <AnimatePresence>
-              {showDetail && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="bg-gourmand-bg border border-gourmand-border rounded-xl p-4 space-y-2 mt-1">
-                    {lines.map((line, idx) => (
-                      <div key={idx} className="flex justify-between items-center gap-2 text-sm">
-                        <span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-gourmand-chocolate">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center text-lg leading-none" aria-hidden>
-                            {line.emoji}
-                          </span>
-                          <span className="truncate">{line.name}</span>
-                        </span>
-                        <div className="flex shrink-0 items-center gap-3">
-                          <span className="text-gourmand-biscuit text-xs">{line.quantity}{line.unit}</span>
-                          <span className="font-semibold w-16 text-right text-gourmand-chocolate">{fmt(line.lineCost)}</span>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="border-t border-gourmand-border pt-2.5 mt-2 flex justify-between">
-                      <span className="text-xs font-semibold text-gourmand-cocoa uppercase tracking-wide">Coût Technique Total</span>
-                      <span className="font-bold text-gourmand-chocolate">{fmt(cost)}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-        )}
-
-        {/* Validate Button */}
-        <motion.button
-          onClick={handleValidate}
-          disabled={!selected || validated}
-          animate={validated ? { scale: [1, 1.05, 1] } : {}}
-          className={`w-full py-4 rounded-xl text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-3 transition-colors active:scale-[0.98] mt-4 ${
-            validated
-              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-              : 'bg-gourmand-chocolate text-white shadow-lg shadow-gourmand-chocolate/10 hover:bg-black'
-          } disabled:opacity-50`}
-        >
-          {validated ? (
-            <><Check size={20} strokeWidth={3} /> Enregistré</>
+          {cart.length === 0 ? (
+            <p className="rounded-xl bg-gourmand-bg/80 py-6 text-center text-sm font-medium text-gourmand-biscuit">
+              Touchez <span className="text-gourmand-chocolate">+</span> sur un produit ci-dessous.
+            </p>
           ) : (
-            'Encaisser'
+            <ul className="max-h-[min(14rem,38vh)] space-y-2 overflow-y-auto pr-0.5">
+              {cart.map((line, idx) => {
+                const d = desserts.find(x => x.id === line.dessertId);
+                if (!d) return null;
+                const sub = lineAmounts[idx] ?? 0;
+                const hint = offerHints[idx];
+                return (
+                  <li
+                    key={line.id}
+                    className="flex flex-col gap-1.5 rounded-xl border border-gourmand-border/70 bg-gourmand-bg/40 px-2 py-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-gourmand-chocolate">
+                          {d.emoji} {d.name}
+                        </p>
+                        {hint && <p className="text-[10px] font-medium text-teal-800">{hint}</p>}
+                        {editingPriceFor === line.id ? (
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={priceDraft}
+                              onChange={e => setPriceDraft(e.target.value)}
+                              className="gourmand-input w-28 max-w-full py-2 text-base"
+                              placeholder="Prix u."
+                              min={0}
+                              step={0.01}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => applyPriceEdit(line.id)}
+                              className="text-xs font-bold text-gourmand-chocolate"
+                            >
+                              OK
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingPriceFor(null);
+                                setPriceDraft('');
+                              }}
+                              className="text-xs text-gourmand-biscuit"
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startPriceEdit(line)}
+                            className="mt-0.5 flex items-center gap-1 text-[10px] font-medium text-gourmand-biscuit"
+                          >
+                            <Pencil size={10} />
+                            {line.priceOverride
+                              ? `PU ${line.priceOverride} €`
+                              : `Tarif ${fmt(catalogFor(d))}`}
+                          </button>
+                        )}
+                      </div>
+                      <p className="shrink-0 text-sm font-bold tabular-nums text-gourmand-chocolate">{fmt(sub)}</p>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setQty(line.id, line.quantity - 1)}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gourmand-border bg-white text-gourmand-chocolate transition-colors active:scale-95"
+                          aria-label="Moins un"
+                        >
+                          <Minus size={18} />
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          inputMode="numeric"
+                          value={String(line.quantity)}
+                          onChange={e => {
+                            const n = parsePositiveInt(e.target.value, 1);
+                            setQty(line.id, n);
+                          }}
+                          className="h-11 min-w-[3.25rem] max-w-[4.5rem] rounded-lg border border-gourmand-border bg-white px-1 text-center text-base font-bold tabular-nums text-gourmand-chocolate"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setQty(line.id, line.quantity + 1)}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gourmand-border bg-white text-gourmand-chocolate transition-colors active:scale-95"
+                          aria-label="Plus un"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCart(c => c.filter(x => x.id !== line.id))}
+                        className="p-1.5 text-gourmand-biscuit hover:text-red-500"
+                        aria-label="Supprimer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </motion.button>
+        </div>
+
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">Produits</p>
+        <div className="space-y-4">
+          {dessertBlocks.map(block => (
+            <section key={block.kind} aria-labelledby={`caisse-block-${block.kind}`}>
+              <h2
+                id={`caisse-block-${block.kind}`}
+                className="mb-1.5 pl-0.5 text-[10px] font-bold uppercase tracking-widest text-gourmand-cocoa/50"
+              >
+                {block.title}
+              </h2>
+              <ul className="space-y-1.5">
+                {block.items.map(d => {
+                  const p = catalogFor(d);
+                  return (
+                    <li key={d.id} className="[content-visibility:auto] [contain-intrinsic-size:48px]">
+                      <button
+                        type="button"
+                        onClick={() => addOne(d.id)}
+                        aria-label={`Ajouter ${d.name}, ${labelForProductKind(d.productKind ?? 'autre')}, ${fmt(p)}`}
+                        className="flex min-h-11 w-full max-w-full items-center justify-between gap-2 rounded-xl border border-gourmand-border bg-white px-2.5 py-1.5 text-left shadow-sm transition-colors active:bg-gourmand-bg/90"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                          <span className="shrink-0 text-lg leading-none" aria-hidden>
+                            {d.emoji}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-[15px] font-semibold leading-tight text-gourmand-chocolate">
+                              {d.name}
+                            </p>
+                            <p className="text-[11px] font-medium tabular-nums leading-tight text-gourmand-biscuit">
+                              {fmt(p)}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className="flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full bg-gourmand-chocolate text-white shadow-sm"
+                          aria-hidden
+                        >
+                          <Plus size={20} strokeWidth={2.5} className="text-white" />
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+        {filteredDesserts.length === 0 && (
+          <p className="py-4 text-center text-sm text-gourmand-biscuit">Aucun résultat.</p>
+        )}
       </div>
-    </motion.div>
+
+      {/* Barre encaissement : z sous la nav (100), au-dessus du contenu scroll */}
+      <div
+        className="pointer-events-none fixed bottom-[88px] left-0 right-0 z-[95] mx-auto w-full max-w-[min(430px,100%)]"
+        role="region"
+        aria-label="Encaissement"
+      >
+        <div className="pointer-events-auto rounded-t-2xl border border-b-0 border-gourmand-border bg-white/98 px-4 pb-3 pt-2 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
+          <div className="mb-2 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">Total</p>
+              <p className="text-2xl font-bold tabular-nums text-gourmand-chocolate">{fmt(totalRevenue)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">Marge</p>
+              <p className="text-lg font-semibold tabular-nums text-emerald-600">{fmt(totalMargin)}</p>
+            </div>
+          </div>
+          <motion.button
+            onClick={handleCheckout}
+            disabled={cart.length === 0 || checkoutDone}
+            animate={checkoutDone ? { scale: [1, 1.02, 1] } : {}}
+            className={
+              cart.length === 0 || checkoutDone
+                ? 'w-full flex min-h-[48px] items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold uppercase tracking-widest bg-gourmand-border/40 text-gourmand-biscuit disabled:cursor-not-allowed'
+                : 'w-full flex min-h-[48px] items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold uppercase tracking-widest bg-gourmand-chocolate text-white shadow-lg shadow-gourmand-chocolate/25 active:scale-[0.99] transition-transform disabled:cursor-not-allowed'
+            }
+            type="button"
+          >
+            {checkoutDone ? (
+              <>
+                <Check size={20} strokeWidth={2.5} />
+                C’est noté
+              </>
+            ) : (
+              <>
+                <Banknote size={20} />
+                Encaisser
+              </>
+            )}
+          </motion.button>
+        </div>
+      </div>
+    </div>
   );
 };

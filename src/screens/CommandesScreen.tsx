@@ -14,7 +14,8 @@ import {
   ClipboardList,
   ChevronDown,
 } from 'lucide-react';
-import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert, ShowToastOptions } from '../types';
+import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert, ShowToastOptions, BundleOfferRule } from '../types';
+import { buildCommandeSaleAllocations } from '../lib/deliveryBundle';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -42,9 +43,21 @@ import {
 interface Props {
   commandes: Commande[];
   desserts: Dessert[];
+  bundleRules: BundleOfferRule[];
   onSave: (cmd: Commande) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onAddSale: (dessert: Dessert, quantity: number, customerType: 'particulier' | 'pro') => Promise<void>;
+  onAddSale: (
+    dessert: Dessert,
+    quantity: number,
+    customerType: 'particulier' | 'pro',
+    options?: {
+      orderGroupId?: string;
+      sourceCommandeId?: string | null;
+      frozenRevenue?: { totalRevenue: number; unitPrice: number };
+      revenueCaption?: string;
+      bundleOfferLabelAtSale?: string;
+    },
+  ) => Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info', opts?: ShowToastOptions) => void;
 }
 
@@ -247,7 +260,7 @@ function NotesChecklistUnits({
   );
 }
 
-export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, onDelete, onAddSale, showToast }) => {
+export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRules, onSave, onDelete, onAddSale, showToast }) => {
   const [screenTab, setScreenTab] = useState<ScreenTab>('commandes');
   const [formOpen, setFormOpen] = useState(false);
   const [detailCommand, setDetailCommand] = useState<Commande | null>(null);
@@ -573,20 +586,23 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
     setConverting(true);
     try {
       if (recordSale) {
-        let skipped = 0;
-        for (const item of deliverTarget.items) {
-          if (!item.dessertId) {
-            skipped++;
-            continue;
-          }
-          const dessert = desserts.find(d => d.id === item.dessertId);
-          if (!dessert) {
-            skipped++;
-            continue;
-          }
-          await onAddSale(dessert, item.quantity, deliverTarget.customerType);
+        const orderGroupId = crypto.randomUUID();
+        const { lines, skippedLines } = buildCommandeSaleAllocations(
+          deliverTarget.items,
+          id => desserts.find(d => d.id === id),
+          deliverTarget.customerType,
+          bundleRules,
+        );
+        for (const row of lines) {
+          await onAddSale(row.dessert, row.quantity, deliverTarget.customerType, {
+            orderGroupId,
+            sourceCommandeId: deliverTarget.id,
+            frozenRevenue: row.frozenRevenue,
+            revenueCaption: row.revenueCaption,
+            bundleOfferLabelAtSale: row.bundleOfferLabelAtSale,
+          });
         }
-        if (skipped > 0) showToast(`${skipped} article(s) ignoré(s) — dessert introuvable`, 'info');
+        if (skippedLines > 0) showToast(`${skippedLines} article(s) ignoré(s) — recette manquante`, 'info');
       }
       await persistCommande({ ...deliverTarget, status: 'delivered' }, 'Commande livrée ✓');
       setDeliverTarget(null);

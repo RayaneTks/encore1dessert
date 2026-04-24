@@ -46,7 +46,7 @@ export const initialBases: Base[] = [
 
 export const initialDesserts: Dessert[] = [
   {
-    id: 'dessert-peanut-caramel', name: 'Tarte cacahuète caramel', emoji: '🥜', sellPriceParticulier: 44, sellPricePro: 38, servings: 8, notes: '', createdAt: '2026-04-01T00:00:00Z',
+    id: 'dessert-peanut-caramel', name: 'Tarte cacahuète caramel', emoji: '🥜', sellPriceParticulier: 44, sellPricePro: 38, servings: 8, productKind: 'tarte', notes: '', createdAt: '2026-04-01T00:00:00Z',
     components: [
       { type: 'base', id: 'prep-shortcrust', quantity: 180 },
       { type: 'base', id: 'prep-caramel', quantity: 95 },
@@ -54,7 +54,7 @@ export const initialDesserts: Dessert[] = [
     ],
   },
   {
-    id: 'dessert-milk-choc', name: 'Tarte chocolat lait', emoji: '🍫', sellPriceParticulier: 42, sellPricePro: 36, servings: 8, notes: '', createdAt: '2026-04-01T00:00:00Z',
+    id: 'dessert-milk-choc', name: 'Tarte chocolat lait', emoji: '🍫', sellPriceParticulier: 42, sellPricePro: 36, servings: 8, productKind: 'tarte', notes: '', createdAt: '2026-04-01T00:00:00Z',
     components: [
       { type: 'base', id: 'prep-shortcrust', quantity: 180 },
       { type: 'base', id: 'prep-caramel', quantity: 70 },
@@ -62,7 +62,7 @@ export const initialDesserts: Dessert[] = [
     ],
   },
   {
-    id: 'dessert-almond', name: 'Tarte amandine', emoji: '🍰', sellPriceParticulier: 38, sellPricePro: 33, servings: 8, notes: '', createdAt: '2026-04-01T00:00:00Z',
+    id: 'dessert-almond', name: 'Tarte amandine', emoji: '🍰', sellPriceParticulier: 38, sellPricePro: 33, servings: 8, productKind: 'tarte', notes: '', createdAt: '2026-04-01T00:00:00Z',
     components: [
       { type: 'base', id: 'prep-shortcrust', quantity: 180 },
       { type: 'base', id: 'prep-almond-cream', quantity: 200 },

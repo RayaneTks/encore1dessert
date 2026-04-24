@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, ChevronDown, X, Settings, ChevronRight, RotateCcw } from 'lucide-react';
-import { HistoryEntry, Commande, Tab, StatPeriod } from '../types';
+import { HistoryEntry, Commande, Tab, StatPeriod, DESSERT_PRODUCT_KIND_OPTIONS } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { IconActionButton } from '../components/IconActionButton';
 import { FilterPillRow, FilterSortByCustomer, FilterField } from '../components/FilterControls';
@@ -9,11 +9,41 @@ import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { fmt, fmtPct, computeGlobalStats, filterHistoryByPeriod, filterHistoryByCustomerType } from '../lib/calculations';
 
+function kindLabel(k: string) {
+  return DESSERT_PRODUCT_KIND_OPTIONS.find(o => o.value === k)?.label ?? k;
+}
+
+function groupHistoryRows(history: HistoryEntry[]) {
+  const m = new Map<string, HistoryEntry[]>();
+  for (const h of history) {
+    const g = h.orderGroupId;
+    m.set(g, [...(m.get(g) || []), h]);
+  }
+  return [...m.entries()]
+    .map(([groupId, entries]) => {
+      const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+      const first = sorted[0];
+      const totalRevenue = sorted.reduce((s, e) => s + e.totalRevenue, 0);
+      const totalProfit = sorted.reduce((s, e) => s + e.totalProfit, 0);
+      return {
+        groupId,
+        entries: sorted,
+        firstDate: first.date,
+        sourceCommandeId: first.sourceCommandeId,
+        customerType: first.customerType,
+        totalRevenue,
+        totalProfit,
+      };
+    })
+    .sort((a, b) => b.firstDate.localeCompare(a.firstDate));
+}
+
 interface Props {
   history: HistoryEntry[];
   commandes: Commande[];
   setActiveTab: (tab: Tab) => void;
   onDelete: (id: string) => Promise<void>;
+  onDeleteOrderGroup: (orderGroupId: string) => Promise<void>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
@@ -23,9 +53,18 @@ const PERIODS: { value: StatPeriod; label: string }[] = [
   { value: 'all', label: 'Tout' },
 ];
 
-export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTab, onDelete, showToast }) => {
+export const HistoryScreen: React.FC<Props> = ({
+  history,
+  commandes,
+  setActiveTab,
+  onDelete,
+  onDeleteOrderGroup,
+  showToast,
+}) => {
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
+  const [groupOpen, setGroupOpen] = useState<ReturnType<typeof groupHistoryRows>[0] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<HistoryEntry | null>(null);
+  const [orderGroupToDelete, setOrderGroupToDelete] = useState<string | null>(null);
   const [period, setPeriod] = useState<StatPeriod>('month');
   const [customerFilter, setCustomerFilter] = useState<'all' | 'particulier' | 'pro'>('all');
 
@@ -34,6 +73,7 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
     return filterHistoryByCustomerType(byPeriod, customerFilter);
   }, [history, period, customerFilter]);
   const stats = useMemo(() => computeGlobalStats(filteredHistory), [filteredHistory]);
+  const orderGroups = useMemo(() => groupHistoryRows(filteredHistory), [filteredHistory]);
 
   const todayISO = new Date().toISOString().split('T')[0];
   const todayCommandes = useMemo(
@@ -48,6 +88,18 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
     setDeleteTarget(null);
     setSelectedEntry(null);
   };
+
+  const confirmDeleteOrderGroup = async () => {
+    if (!orderGroupToDelete) return;
+    await onDeleteOrderGroup(orderGroupToDelete);
+    showToast('Ticket supprimé', 'info');
+    setOrderGroupToDelete(null);
+    setGroupOpen(null);
+    setSelectedEntry(null);
+  };
+
+  const sameGroupCount = (orderGroupId: string) =>
+    history.filter(h => h.orderGroupId === orderGroupId).length;
 
   const marginColor = (rate: number) => {
     if (rate >= 0.6) return 'text-emerald-500';
@@ -193,9 +245,8 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
           </SectionCard>
         )}
 
-        {/* Transactions */}
         <SectionCard title="Transactions" padding={false}>
-          {filteredHistory.length === 0 ? (
+          {orderGroups.length === 0 ? (
             <div className="p-12 text-center">
               <p className="font-semibold text-sm text-gourmand-chocolate mb-1">
                 {period === 'all' ? 'Aucune vente' : 'Aucune vente sur cette période'}
@@ -206,40 +257,85 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
             </div>
           ) : (
             <div className="divide-y divide-gourmand-border/60">
-              {filteredHistory.slice(0, 15).map(h => (
-                <button
-                  key={h.id}
-                  onClick={() => setSelectedEntry(h)}
-                  className="w-full p-4 flex justify-between items-center hover:bg-gourmand-bg/50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{h.dessertEmoji}</span>
-                    <div>
-                      <p className="font-medium text-sm text-gourmand-chocolate">{h.quantitySold}× {h.dessertName}</p>
-                      <p className="text-[10px] font-medium text-gourmand-biscuit mt-0.5">
-                        {new Date(h.date).toLocaleDateString('fr-FR')} · {new Date(h.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                      <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        h.customerType === 'pro'
-                          ? 'bg-gourmand-chocolate text-white'
-                          : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
-                      }`}>
-                        {h.customerType === 'pro' ? 'Pro' : 'Particulier'}
+              {orderGroups.slice(0, 20).map(g => {
+                const cmd = g.sourceCommandeId
+                  ? commandes.find(c => c.id === g.sourceCommandeId)
+                  : null;
+                const isMulti = g.entries.length > 1;
+                const isFromCommande = Boolean(g.sourceCommandeId);
+                const one = g.entries[0];
+                return (
+                  <button
+                    key={g.groupId}
+                    type="button"
+                    onClick={() => {
+                      if (g.entries.length === 1) {
+                        setSelectedEntry(g.entries[0]);
+                        return;
+                      }
+                      setGroupOpen(g);
+                    }}
+                    className="w-full p-4 flex justify-between items-center hover:bg-gourmand-bg/50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-2xl flex-shrink-0" aria-hidden>
+                        {isFromCommande ? '🧾' : isMulti ? g.entries[0].dessertEmoji : one.dessertEmoji}
                       </span>
+                      <div className="min-w-0">
+                        {!isMulti && (
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                            {kindLabel(one.productKind)}
+                          </p>
+                        )}
+                        <p className="font-medium text-sm text-gourmand-chocolate truncate">
+                          {isMulti
+                            ? cmd
+                              ? cmd.clientName
+                              : `${g.entries.length} lignes — caisse`
+                            : cmd
+                              ? cmd.clientName
+                              : `${one.quantitySold}× ${one.dessertName}`}
+                        </p>
+                        {!isMulti && cmd && (
+                          <p className="text-[11px] text-gourmand-biscuit/90 truncate mt-0.5">
+                            {one.quantitySold}× {one.dessertName}
+                          </p>
+                        )}
+                        <p className="text-[10px] font-medium text-gourmand-biscuit mt-0.5">
+                          {new Date(g.firstDate).toLocaleDateString('fr-FR')} ·{' '}
+                          {new Date(g.firstDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          {isFromCommande && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-100">
+                              Commande
+                            </span>
+                          )}
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                              g.customerType === 'pro'
+                                ? 'bg-gourmand-chocolate text-white'
+                                : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
+                            }`}
+                          >
+                            {g.customerType === 'pro' ? 'Pro' : 'Particulier'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold text-sm">{fmt(h.totalRevenue)}</p>
-                      <p className="text-[10px] font-medium text-emerald-500">+{fmt(h.totalProfit)}</p>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="text-right">
+                        <p className="font-semibold text-sm tabular-nums">{fmt(g.totalRevenue)}</p>
+                        <p className="text-[10px] font-medium text-emerald-500 tabular-nums">+{fmt(g.totalProfit)}</p>
+                      </div>
+                      <ChevronDown size={14} className="text-gourmand-biscuit -rotate-90" />
                     </div>
-                    <ChevronDown size={14} className="text-gourmand-biscuit -rotate-90" />
-                  </div>
-                </button>
-              ))}
-              {filteredHistory.length > 15 && (
+                  </button>
+                );
+              })}
+              {orderGroups.length > 20 && (
                 <p className="text-center text-[10px] text-gourmand-biscuit py-3 font-medium">
-                  +{filteredHistory.length - 15} transactions · change de période pour filtrer
+                  +{orderGroups.length - 20} commandes · affine la période pour filtrer
                 </p>
               )}
             </div>
@@ -247,7 +343,105 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
         </SectionCard>
       </div>
 
-      {/* Modale détail transaction */}
+      {/* Modale détail commande (ticket) */}
+      <AnimatePresence>
+        {groupOpen && !selectedEntry && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-end justify-center px-4 pb-12 sm:pb-32"
+          >
+            <div className="absolute inset-0 bg-gourmand-chocolate/40 backdrop-blur-sm" onClick={() => setGroupOpen(null)} />
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              className="relative flex max-h-[85vh] w-full max-w-[400px] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            >
+              <div className="border-b border-gourmand-border p-5 flex flex-shrink-0 justify-between items-start gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1">Détail du ticket</p>
+                  <h3 className="text-lg font-bold tracking-tight break-words">
+                    {groupOpen.sourceCommandeId
+                      ? commandes.find(c => c.id === groupOpen.sourceCommandeId)?.clientName ?? 'Client'
+                      : 'Vente directe (caisse)'}
+                  </h3>
+                  <p className="text-xs text-gourmand-biscuit mt-1">
+                    {new Date(groupOpen.firstDate).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })} ·{' '}
+                    {groupOpen.entries.length} ligne{groupOpen.entries.length > 1 ? 's' : ''}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGroupOpen(null)}
+                  className="h-8 w-8 flex-shrink-0 rounded-full bg-gourmand-bg flex items-center justify-center text-gourmand-chocolate"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-0 divide-y divide-gourmand-border/50">
+                {groupOpen.entries.map(line => (
+                  <button
+                    type="button"
+                    key={line.id}
+                    onClick={() => {
+                      setGroupOpen(null);
+                      setSelectedEntry(line);
+                    }}
+                    className="w-full flex items-start justify-between gap-3 py-3 text-left first:pt-0 hover:bg-gourmand-bg/40 transition-colors"
+                  >
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span className="text-xl flex-shrink-0">{line.dessertEmoji}</span>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                          {kindLabel(line.productKind)}
+                        </p>
+                        <p className="font-semibold text-sm text-gourmand-chocolate leading-tight">
+                          {line.dessertName}
+                        </p>
+                        <div className="text-[10px] text-gourmand-biscuit mt-0.5 leading-snug space-y-0.5">
+                          {line.bundleOfferLabelAtSale ? (
+                            <p className="text-[10px] font-semibold text-teal-800">Offre : {line.bundleOfferLabelAtSale}</p>
+                          ) : null}
+                          {line.revenueCaption ? (
+                            <p className="text-gourmand-chocolate/95 font-medium">{line.revenueCaption}</p>
+                          ) : (
+                            <p>Total {fmt(line.totalRevenue)}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-bold tabular-nums">{fmt(line.totalRevenue)}</p>
+                      <p className="text-[10px] font-medium text-emerald-600">+{fmt(line.totalProfit)}</p>
+                    </div>
+                    <ChevronDown size={12} className="text-gourmand-biscuit -rotate-90 flex-shrink-0 mt-1" />
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2 border-t border-gourmand-border bg-gourmand-bg/50 p-4">
+                <button
+                  type="button"
+                  onClick={() => setOrderGroupToDelete(groupOpen.groupId)}
+                  className="w-full py-3.5 text-[11px] font-bold uppercase tracking-widest text-red-500 bg-red-50 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                >
+                  <Trash2 size={16} /> Supprimer ce ticket
+                </button>
+                <div className="flex flex-shrink-0 justify-between text-sm">
+                  <span className="font-semibold text-gourmand-biscuit">Total ticket</span>
+                  <div className="text-right">
+                    <p className="font-bold text-gourmand-chocolate tabular-nums">{fmt(groupOpen.totalRevenue)}</p>
+                    <p className="text-xs font-semibold text-emerald-600 tabular-nums">+{fmt(groupOpen.totalProfit)}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modale détail transaction (ligne) */}
       <AnimatePresence>
         {selectedEntry && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-end justify-center px-4 pb-12 sm:pb-32">
@@ -258,7 +452,12 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-1">
                     {new Date(selectedEntry.date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                   </p>
-                  <h3 className="text-lg font-bold tracking-tight">{selectedEntry.dessertEmoji} {selectedEntry.quantitySold}× {selectedEntry.dessertName}</h3>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                    {kindLabel(selectedEntry.productKind)}
+                  </p>
+                  <h3 className="text-lg font-bold tracking-tight mt-0.5">
+                    {selectedEntry.dessertEmoji} {selectedEntry.quantitySold}× {selectedEntry.dessertName}
+                  </h3>
                   <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                     selectedEntry.customerType === 'pro'
                       ? 'bg-gourmand-chocolate text-white'
@@ -290,11 +489,34 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
                   </div>
                 </div>
 
+                {selectedEntry.bundleOfferLabelAtSale ? (
+                  <p className="text-xs font-semibold text-teal-800">
+                    Offre (figée) : {selectedEntry.bundleOfferLabelAtSale}
+                  </p>
+                ) : null}
+                {selectedEntry.revenueCaption && (
+                  <p className="text-sm font-medium leading-relaxed text-gourmand-chocolate">
+                    {selectedEntry.revenueCaption}
+                  </p>
+                )}
+
+                {sameGroupCount(selectedEntry.orderGroupId) > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOrderGroupToDelete(selectedEntry.orderGroupId);
+                    }}
+                    className="w-full py-3.5 text-[11px] font-bold uppercase tracking-widest text-amber-900/90 bg-amber-100/80 border border-amber-200/80 rounded-xl flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors"
+                  >
+                    <Trash2 size={16} /> Tout le ticket ({sameGroupCount(selectedEntry.orderGroupId)} lignes)
+                  </button>
+                )}
+
                 <button
                   onClick={() => { setSelectedEntry(null); setDeleteTarget(selectedEntry); }}
                   className="w-full py-4 text-[11px] font-bold uppercase tracking-widest text-red-500 bg-red-50 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
                 >
-                  <Trash2 size={16} /> Annuler la transaction
+                  <Trash2 size={16} /> {sameGroupCount(selectedEntry.orderGroupId) > 1 ? 'Cette ligne seule' : 'Supprimer la vente'}
                 </button>
               </div>
             </motion.div>
@@ -309,6 +531,14 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
             message="Supprimer cette vente définitivement ?"
             onConfirm={confirmDelete}
             onCancel={() => setDeleteTarget(null)}
+          />
+        )}
+        {orderGroupToDelete && (
+          <ConfirmDialog
+            title="Supprimer le ticket"
+            message={`Supprimer toutes les lignes de ce ticket (${sameGroupCount(orderGroupToDelete)} vente(s)) ?`}
+            onConfirm={confirmDeleteOrderGroup}
+            onCancel={() => setOrderGroupToDelete(null)}
           />
         )}
       </AnimatePresence>

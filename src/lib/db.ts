@@ -1,6 +1,33 @@
 import { supabase } from './supabase';
-import type { RawIngredient, Base, BaseComponent, Dessert, DessertComponent, HistoryEntry, SnapshotLine, Commande, CommandeStatus, CommandeItem, NotifyBefore } from '../types';
+import type {
+  RawIngredient,
+  Base,
+  BaseComponent,
+  Dessert,
+  DessertComponent,
+  DessertProductKind,
+  HistoryEntry,
+  SnapshotLine,
+  Commande,
+  CommandeStatus,
+  CommandeItem,
+  NotifyBefore,
+} from '../types';
 import { normalizeCommandeItems } from './commandeProduction';
+
+function normalizeProductKind(raw: unknown): DessertProductKind {
+  const v = typeof raw === 'string' ? raw : 'tarte';
+  if (v === 'tarte' || v === 'flan' || v === 'tiramisu' || v === 'autre') return v;
+  return 'tarte';
+}
+
+function isMissingHistoryOptionalColumnError(err: { message?: string } | null | undefined): boolean {
+  const m = (err?.message ?? '').toLowerCase();
+  return (
+    m.includes('history_entries') &&
+    (m.includes('schema cache') || m.includes('could not find the') || m.includes("column of 'history_entries'"))
+  );
+}
 
 // ─── RAW INGREDIENTS ────────────────────────────────────────
 
@@ -147,6 +174,7 @@ export async function fetchDesserts(): Promise<Dessert[]> {
     sellPriceParticulier,
     sellPricePro,
     servings: d.servings,
+    productKind: normalizeProductKind(d.product_kind),
     notes: d.notes || '',
     createdAt: d.created_at,
     components: (compsRes.data || [])
@@ -169,6 +197,7 @@ export async function upsertDessert(dessert: Dessert): Promise<Dessert> {
     sell_price_pro: dessert.sellPricePro,
     servings: dessert.servings,
     notes: dessert.notes,
+    product_kind: dessert.productKind,
   };
   if (!isNew) payload.id = dessert.id;
 
@@ -217,6 +246,7 @@ export async function fetchHistory(): Promise<HistoryEntry[]> {
     dessertId: h.dessert_id || '',
     dessertName: h.dessert_name,
     dessertEmoji: h.dessert_emoji,
+    productKind: normalizeProductKind(h.product_kind),
     quantitySold: h.quantity_sold,
     unitCost: Number(h.unit_cost),
     unitPrice: Number(h.unit_price),
@@ -226,6 +256,14 @@ export async function fetchHistory(): Promise<HistoryEntry[]> {
     totalProfit: Number(h.total_profit),
     marginRate: Number(h.margin_rate),
     linesSnapshot: h.lines_snapshot as SnapshotLine[],
+    orderGroupId: typeof h.order_group_id === 'string' && h.order_group_id ? h.order_group_id : h.id,
+    sourceCommandeId: typeof h.source_commande_id === 'string' && h.source_commande_id ? h.source_commande_id : null,
+    catalogueUnitAtSale: h.catalogue_unit_at_sale != null ? Number(h.catalogue_unit_at_sale) : 0,
+    revenueCaption: typeof h.revenue_caption === 'string' && h.revenue_caption ? h.revenue_caption : '',
+    bundleOfferLabelAtSale:
+      typeof (h as { bundle_offer_label_at_sale?: string }).bundle_offer_label_at_sale === 'string'
+        ? (h as { bundle_offer_label_at_sale: string }).bundle_offer_label_at_sale
+        : '',
   }));
 }
 
@@ -233,6 +271,7 @@ export async function insertHistoryEntry(entry: {
   dessertId: string;
   dessertName: string;
   dessertEmoji: string;
+  productKind: DessertProductKind;
   quantitySold: number;
   unitCost: number;
   unitPrice: number;
@@ -242,25 +281,41 @@ export async function insertHistoryEntry(entry: {
   totalProfit: number;
   marginRate: number;
   linesSnapshot: SnapshotLine[];
+  orderGroupId: string;
+  sourceCommandeId: string | null;
+  catalogueUnitAtSale: number;
+  revenueCaption: string;
+  bundleOfferLabelAtSale: string;
 }): Promise<HistoryEntry> {
-  const { data, error } = await supabase
-    .from('history_entries')
-    .insert({
-      dessert_id: entry.dessertId.startsWith('dessert-') ? null : entry.dessertId,
-      dessert_name: entry.dessertName,
-      dessert_emoji: entry.dessertEmoji,
-      quantity_sold: entry.quantitySold,
-      unit_cost: entry.unitCost,
-      unit_price: entry.unitPrice,
-      customer_type: entry.customerType,
-      total_revenue: entry.totalRevenue,
-      total_cost: entry.totalCost,
-      total_profit: entry.totalProfit,
-      margin_rate: entry.marginRate,
-      lines_snapshot: entry.linesSnapshot,
-    })
-    .select()
-    .single();
+  const fullRow = {
+    dessert_id: entry.dessertId.startsWith('dessert-') ? null : entry.dessertId,
+    dessert_name: entry.dessertName,
+    dessert_emoji: entry.dessertEmoji,
+    product_kind: entry.productKind,
+    quantity_sold: entry.quantitySold,
+    unit_cost: entry.unitCost,
+    unit_price: entry.unitPrice,
+    customer_type: entry.customerType,
+    total_revenue: entry.totalRevenue,
+    total_cost: entry.totalCost,
+    total_profit: entry.totalProfit,
+    margin_rate: entry.marginRate,
+    lines_snapshot: entry.linesSnapshot,
+    order_group_id: entry.orderGroupId,
+    source_commande_id: entry.sourceCommandeId,
+    catalogue_unit_at_sale: entry.catalogueUnitAtSale,
+    revenue_caption: entry.revenueCaption || '',
+    bundle_offer_label_at_sale: entry.bundleOfferLabelAtSale || '',
+  };
+
+  let res = await supabase.from('history_entries').insert(fullRow).select().single();
+
+  if (res.error && isMissingHistoryOptionalColumnError(res.error)) {
+    const { catalogue_unit_at_sale: _a, revenue_caption: _r, bundle_offer_label_at_sale: _b, ...rest } = fullRow;
+    res = await supabase.from('history_entries').insert(rest).select().single();
+  }
+
+  const { data, error } = res;
   if (error) throw error;
   return {
     id: data.id,
@@ -268,6 +323,7 @@ export async function insertHistoryEntry(entry: {
     dessertId: data.dessert_id || '',
     dessertName: data.dessert_name,
     dessertEmoji: data.dessert_emoji,
+    productKind: normalizeProductKind(data.product_kind),
     quantitySold: data.quantity_sold,
     unitCost: Number(data.unit_cost),
     unitPrice: Number(data.unit_price),
@@ -277,7 +333,25 @@ export async function insertHistoryEntry(entry: {
     totalProfit: Number(data.total_profit),
     marginRate: Number(data.margin_rate),
     linesSnapshot: data.lines_snapshot as SnapshotLine[],
+    orderGroupId: typeof data.order_group_id === 'string' && data.order_group_id ? data.order_group_id : data.id,
+    sourceCommandeId: typeof data.source_commande_id === 'string' && data.source_commande_id ? data.source_commande_id : null,
+    catalogueUnitAtSale:
+      data.catalogue_unit_at_sale != null && data.catalogue_unit_at_sale !== ''
+        ? Number(data.catalogue_unit_at_sale)
+        : entry.catalogueUnitAtSale,
+    revenueCaption: typeof (data as { revenue_caption?: string }).revenue_caption === 'string'
+      ? (data as { revenue_caption: string }).revenue_caption
+      : entry.revenueCaption || '',
+    bundleOfferLabelAtSale:
+      typeof (data as { bundle_offer_label_at_sale?: string }).bundle_offer_label_at_sale === 'string'
+        ? (data as { bundle_offer_label_at_sale: string }).bundle_offer_label_at_sale
+        : entry.bundleOfferLabelAtSale || '',
   };
+}
+
+export async function deleteHistoryByOrderGroupId(orderGroupId: string): Promise<void> {
+  const { error } = await supabase.from('history_entries').delete().eq('order_group_id', orderGroupId);
+  if (error) throw error;
 }
 
 export async function deleteHistoryEntry(id: string): Promise<void> {
