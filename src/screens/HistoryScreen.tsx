@@ -4,7 +4,7 @@ import { Trash2, ChevronDown, X, Settings, ChevronRight, RotateCcw } from 'lucid
 import { HistoryEntry, Commande, Tab, StatPeriod } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { IconActionButton } from '../components/IconActionButton';
-import { CUSTOMER_TYPE_OPTIONS, FilterChipRow, FilterField } from '../components/FilterControls';
+import { FilterPillRow, FilterSortByCustomer, FilterField } from '../components/FilterControls';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { fmt, fmtPct, computeGlobalStats, filterHistoryByPeriod, filterHistoryByCustomerType } from '../lib/calculations';
@@ -98,21 +98,14 @@ export const HistoryScreen: React.FC<Props> = ({ history, commandes, setActiveTa
             )}
           </div>
           <FilterField label="Période">
-            <FilterChipRow
+            <FilterPillRow
               options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
               value={period}
               onChange={setPeriod}
               aria-label="Filtrer par période"
             />
           </FilterField>
-          <FilterField label="Type client">
-            <FilterChipRow
-              options={CUSTOMER_TYPE_OPTIONS}
-              value={customerFilter}
-              onChange={setCustomerFilter}
-              aria-label="Filtrer par type de client"
-            />
-          </FilterField>
+          <FilterSortByCustomer value={customerFilter} onChange={setCustomerFilter} />
           <p className="px-0.5 text-xs text-gourmand-biscuit/80">
             {periodLabel} · {customerLabel}
           </p>

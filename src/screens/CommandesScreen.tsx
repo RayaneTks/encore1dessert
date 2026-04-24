@@ -20,7 +20,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
-import { CUSTOMER_TYPE_OPTIONS, CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow, FilterField } from '../components/FilterControls';
+import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow, FilterField, FilterPillRow, FilterSortByCustomer } from '../components/FilterControls';
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -676,7 +676,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
           >
             <div className="px-2 pb-2 space-y-3">
               <FilterField label="Statut">
-                <FilterChipRow
+                <FilterPillRow
                   options={[
                     { value: 'all', label: 'Toutes' },
                     { value: 'pending', label: STATUS_LABEL.pending },
@@ -688,14 +688,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
                   aria-label="Filtrer par statut de commande"
                 />
               </FilterField>
-              <FilterField label="Type client">
-                <FilterChipRow
-                  options={CUSTOMER_TYPE_OPTIONS}
-                  value={customerFilterOrdres}
-                  onChange={setCustomerFilterOrdres}
-                  aria-label="Filtrer par type de client"
-                />
-              </FilterField>
+              <FilterSortByCustomer value={customerFilterOrdres} onChange={setCustomerFilterOrdres} />
             </div>
 
             {notifPerm === 'default' && isNotificationSupported() && (
