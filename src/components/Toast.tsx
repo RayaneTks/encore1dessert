@@ -50,7 +50,12 @@ const ToastItem: React.FC<{ toast: ToastData; onDismiss: (id: string) => void }>
       <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
         <Icon size={14} strokeWidth={3} />
       </div>
-      <p className="text-sm font-bold flex-1">{toast.message}</p>
+      <div className="min-w-0 flex-1 text-left">
+        {toast.emphasis ? (
+          <p className="text-base font-extrabold leading-tight">{toast.emphasis}</p>
+        ) : null}
+        <p className={`text-sm font-bold ${toast.emphasis ? 'mt-1 opacity-95' : ''}`}>{toast.message}</p>
+      </div>
       <button
         onClick={() => onDismiss(toast.id)}
         aria-label="Fermer la notification"

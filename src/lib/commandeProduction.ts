@@ -76,7 +76,7 @@ export function commandeProductionComplete(cmd: Commande): boolean {
 export function totalDessertsRemaining(commandes: Commande[]): number {
   let s = 0;
   for (const cmd of commandes) {
-    if (cmd.status !== 'pending') continue;
+    if (cmd.status !== 'pending' && cmd.status !== 'ready') continue;
     for (const it of cmd.items) {
       if (!it.dessertName.trim()) continue;
       s += itemRemaining(it);
@@ -88,7 +88,7 @@ export function totalDessertsRemaining(commandes: Commande[]): number {
 export function totalDessertsOrdered(commandes: Commande[]): number {
   let s = 0;
   for (const cmd of commandes) {
-    if (cmd.status !== 'pending') continue;
+    if (cmd.status !== 'pending' && cmd.status !== 'ready') continue;
     for (const it of cmd.items) {
       if (!it.dessertName.trim()) continue;
       s += Math.max(0, Math.floor(it.quantity));
@@ -108,7 +108,7 @@ export type KitchenGroupedLine = {
 export function kitchenLinesByDessert(commandes: Commande[]): Map<string, KitchenGroupedLine[]> {
   const map = new Map<string, KitchenGroupedLine[]>();
   for (const cmd of commandes) {
-    if (cmd.status !== 'pending') continue;
+    if (cmd.status !== 'pending' && cmd.status !== 'ready') continue;
     cmd.items.forEach((item, itemIndex) => {
       if (!item.dessertName.trim()) return;
       const key = productionKey(item);

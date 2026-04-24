@@ -14,7 +14,7 @@ import {
   ClipboardList,
   ChevronDown,
 } from 'lucide-react';
-import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert } from '../types';
+import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert, ShowToastOptions } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -45,7 +45,7 @@ interface Props {
   onSave: (cmd: Commande) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAddSale: (dessert: Dessert, quantity: number, customerType: 'particulier' | 'pro') => Promise<void>;
-  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  showToast: (msg: string, type?: 'success' | 'error' | 'info', opts?: ShowToastOptions) => void;
 }
 
 type ScreenTab = 'commandes' | 'cuisine';
@@ -439,10 +439,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
   };
 
   const persistCommande = useCallback(
-    async (cmd: Commande, toastMsg?: string) => {
+    async (cmd: Commande, toastMsg?: string, toastOpts?: ShowToastOptions) => {
       const normalized = { ...cmd, items: normalizeCommandeItems(cmd.items) };
       await onSave(normalized);
-      if (toastMsg) showToast(toastMsg, 'success');
+      if (toastMsg) showToast(toastMsg, 'success', toastOpts);
     },
     [onSave, showToast],
   );
@@ -459,11 +459,21 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, onSave, 
     async (cmd: Commande, itemIndex: number, patch: Partial<CommandeItem>) => {
       const items = cmd.items.map((it, i) => (i === itemIndex ? normalizeCommandeItem({ ...it, ...patch }) : it));
       const candid = { ...cmd, items };
+      const merged = mergeCommandeItems(items);
       if (cmd.status === 'pending' && commandeProductionComplete(candid)) {
-        const merged = mergeCommandeItems(items);
-        await persistCommande({ ...cmd, items: merged, status: 'ready' }, 'Commande prête ✓');
+        await persistCommande(
+          { ...cmd, items: merged, status: 'ready' },
+          'Commande prête ✓',
+          { emphasis: cmd.clientName.trim() || 'Commande' },
+        );
+      } else if (cmd.status === 'ready' && !commandeProductionComplete(candid)) {
+        await persistCommande(
+          { ...cmd, items: merged, status: 'pending' },
+          'Repasse en attente (cuisine)',
+          { emphasis: cmd.clientName.trim() || 'Commande' },
+        );
       } else {
-        await persistCommande(candid);
+        await persistCommande({ ...cmd, items: merged });
       }
     },
     [persistCommande],

@@ -107,8 +107,16 @@ export type StatPeriod = 'week' | 'month' | 'all';
 
 // ─── Toast ─────────────────────────────────────────────────
 export type ToastType = 'success' | 'error' | 'info';
+
+/** Options du toast (3e argument de `showToast`). */
+export interface ShowToastOptions {
+  emphasis?: string;
+}
+
 export interface ToastData {
   id: string;
   message: string;
   type: ToastType;
+  /** Affiché en gras au-dessus du message (ex. nom client). */
+  emphasis?: string;
 }

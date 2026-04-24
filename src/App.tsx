@@ -8,6 +8,7 @@ import {
   HistoryEntry,
   Commande,
   ToastData,
+  ShowToastOptions,
 } from './types';
 import {
   calculateDessertCost,
@@ -45,10 +46,13 @@ export default function App() {
   });
 
   // ─── Toast ─────────────────────────────────────────────────
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    const id = Date.now().toString();
-    setToasts(prev => [...prev, { id, message, type }]);
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: 'success' | 'error' | 'info' = 'success', opts?: ShowToastOptions) => {
+      const id = Date.now().toString();
+      setToasts(prev => [...prev, { id, message, type, emphasis: opts?.emphasis }]);
+    },
+    [],
+  );
 
   const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
