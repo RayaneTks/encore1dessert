@@ -13,14 +13,17 @@ import {
   ChefHat,
   ClipboardList,
   ChevronDown,
+  Scale,
+  CheckCheck,
 } from 'lucide-react';
-import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert, ShowToastOptions, BundleOfferRule } from '../types';
+import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert, RawIngredient, Base, ShowToastOptions, BundleOfferRule } from '../types';
 import { buildCommandeSaleAllocations } from '../lib/deliveryBundle';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
+import { ScaleModal } from '../components/ScaleModal';
 import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow, FilterField, FilterPillRow, FilterSortByCustomer } from '../components/FilterControls';
 import {
   requestNotificationPermission,
@@ -44,6 +47,8 @@ import { commandeHiddenFromOrdresList, localDateISO } from '../lib/dateLocal';
 interface Props {
   commandes: Commande[];
   desserts: Dessert[];
+  ingredients: RawIngredient[];
+  bases: Base[];
   bundleRules: BundleOfferRule[];
   onSave: (cmd: Commande) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -266,7 +271,7 @@ function NotesChecklistUnits({
   );
 }
 
-export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRules, onSave, onDelete, onAddSale, showToast }) => {
+export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredients, bases, bundleRules, onSave, onDelete, onAddSale, showToast }) => {
   const [screenTab, setScreenTab] = useState<ScreenTab>('commandes');
   const [formOpen, setFormOpen] = useState(false);
   const [detailCommand, setDetailCommand] = useState<Commande | null>(null);
@@ -280,6 +285,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
   const [filter, setFilter] = useState<CommandeStatus | 'all'>('all');
   const [customerFilterOrdres, setCustomerFilterOrdres] = useState<'all' | 'particulier' | 'pro'>('all');
   const [notifPerm, setNotifPerm] = useState<ReturnType<typeof getNotificationPermission>>(getNotificationPermission);
+  /** Recette ouverte dans ScaleModal depuis le board cuisine */
+  const [kitchenScaleTarget, setKitchenScaleTarget] = useState<{ dessert: Dessert; qty: number } | null>(null);
   const [deliverTarget, setDeliverTarget] = useState<Commande | null>(null);
   const [converting, setConverting] = useState(false);
   /** Clés de groupe dessert dépliés dans l’onglet Cuisine (par défaut : aucun = tout fermé). */
@@ -909,34 +916,68 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
                 const total = lines.reduce((s, l) => s + l.item.quantity, 0);
                 const done = total - remaining;
                 const expanded = kitchenExpandedKeys.has(key);
+                const dessertObj = desserts.find(d => lines[0]?.item.dessertId === d.id);
+                const allDone = remaining === 0;
+
                 return (
                   <div key={key} className="gourmand-card border rounded-2xl overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setKitchenExpandedKeys(prev => {
-                          const next = new Set(prev);
-                          if (next.has(key)) next.delete(key);
-                          else next.add(key);
-                          return next;
-                        })
-                      }
-                      className="flex w-full items-center gap-2 min-w-0 p-3 text-left cursor-pointer transition-colors duration-200 hover:bg-gourmand-bg/50 active:bg-gourmand-bg/80"
-                      aria-expanded={expanded}
-                    >
-                      <ChevronDown
-                        size={18}
-                        className={`shrink-0 text-gourmand-biscuit transition-transform duration-200 ease-out ${expanded ? 'rotate-0' : '-rotate-90'}`}
-                        aria-hidden
-                      />
-                      <span className="text-xl shrink-0" aria-hidden>
-                        {emoji}
-                      </span>
-                      <h3 className="text-[15px] font-bold text-gourmand-chocolate truncate flex-1 min-w-0">{name}</h3>
-                      <span className="text-xs font-semibold tabular-nums text-gourmand-biscuit shrink-0">
-                        {done}/{total}
-                      </span>
-                    </button>
+                    {/* En-tête groupe : expand + nom + compteur + actions */}
+                    <div className="flex items-center min-w-0 gap-1 p-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setKitchenExpandedKeys(prev => {
+                            const next = new Set(prev);
+                            if (next.has(key)) next.delete(key);
+                            else next.add(key);
+                            return next;
+                          })
+                        }
+                        className="flex flex-1 items-center gap-2 min-w-0 text-left cursor-pointer"
+                        aria-expanded={expanded}
+                      >
+                        <ChevronDown
+                          size={18}
+                          className={`shrink-0 text-gourmand-biscuit transition-transform duration-200 ease-out ${expanded ? 'rotate-0' : '-rotate-90'}`}
+                          aria-hidden
+                        />
+                        <span className="text-xl shrink-0" aria-hidden>{emoji}</span>
+                        <h3 className="text-[15px] font-bold text-gourmand-chocolate truncate flex-1 min-w-0">{name}</h3>
+                        <span className={`text-xs font-bold tabular-nums shrink-0 ${allDone ? 'text-emerald-600' : 'text-gourmand-biscuit'}`}>
+                          {done}/{total}
+                        </span>
+                      </button>
+
+                      {/* Bouton : voir recette ×total */}
+                      {dessertObj && (
+                        <button
+                          type="button"
+                          onClick={() => setKitchenScaleTarget({ dessert: dessertObj, qty: total })}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gourmand-border bg-gourmand-bg text-gourmand-biscuit active:bg-gourmand-border ml-1"
+                          aria-label={`Voir la recette ×${total} pour ${name}`}
+                        >
+                          <Scale size={15} />
+                        </button>
+                      )}
+
+                      {/* Bouton : tout marquer fait */}
+                      {!allDone && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            for (const line of lines) {
+                              const cmd = commandes.find(c => c.id === line.commandeId);
+                              if (cmd) await patchCommandeItem(cmd, line.itemIndex, { producedQty: line.item.quantity });
+                            }
+                          }}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 active:bg-emerald-100 ml-1"
+                          aria-label={`Tout marquer fait pour ${name}`}
+                        >
+                          <CheckCheck size={15} />
+                        </button>
+                      )}
+                    </div>
+
                     <AnimatePresence initial={false}>
                       {expanded && (
                         <motion.div
@@ -983,6 +1024,19 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, bundleRu
           </motion.div>
         )}
       </div>
+
+      {/* Scale modal depuis Cuisine */}
+      <AnimatePresence>
+        {kitchenScaleTarget && (
+          <ScaleModal
+            target={{ type: 'dessert', item: kitchenScaleTarget.dessert }}
+            ingredients={ingredients}
+            bases={bases}
+            onClose={() => setKitchenScaleTarget(null)}
+            initialQuantity={kitchenScaleTarget.qty}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Formulaire création / édition */}
       <AnimatePresence>

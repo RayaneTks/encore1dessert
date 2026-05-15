@@ -456,6 +456,8 @@ export default function App() {
                 key="commandes"
                 commandes={commandes}
                 desserts={desserts}
+                ingredients={ingredients}
+                bases={bases}
                 bundleRules={bundleRules}
                 onSave={handleSaveCommande}
                 onDelete={handleDeleteCommande}

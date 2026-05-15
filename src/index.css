@@ -3,14 +3,15 @@
 
 @theme {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  
-  /* Encore1Dessert - Quiet Luxury / Premium Neutral Palette */
-  --color-gourmand-bg: #FAFAF9;         /* Stone 50 pour un aspect très propre */
-  --color-gourmand-chocolate: #1C1917;  /* Stone 900, presque noir - fort contraste AAA */
-  --color-gourmand-biscuit: #A8A29E;    /* Stone 400 pour les notes désactivées */
-  --color-gourmand-strawberry: #000000; /* Le noir pur comme couleur d'action pour le luxe, ou dark stone */
-  --color-gourmand-cocoa: #44403C;      /* Stone 700 */
-  --color-gourmand-border: #E7E5E4;     /* Stone 200, bordure ultra fine et discrète */
+
+  /* Encore1Dessert — Palette Artisan Pâtisserie */
+  --color-gourmand-bg: #FDF8F2;         /* Crème chaude — fond principal */
+  --color-gourmand-chocolate: #241309;  /* Chocolat noir — texte & CTA */
+  --color-gourmand-biscuit: #9B7558;    /* Café au lait — secondaire */
+  --color-gourmand-strawberry: #B83232; /* Fraise — danger */
+  --color-gourmand-cocoa: #5C3D2E;      /* Cacao — tertiaire */
+  --color-gourmand-border: #EAD8C3;     /* Caramel pâle — bordures */
+  --color-gourmand-caramel: #C05621;    /* Caramel rôti — accent */
   --color-gourmand-white: #FFFFFF;
 }
 
@@ -26,7 +27,7 @@
   }
 
   ::selection {
-    background-color: rgba(28, 25, 23, 0.1);
+    background-color: rgba(36, 19, 9, 0.1);
     color: var(--color-gourmand-chocolate);
   }
 
@@ -43,7 +44,6 @@
     cursor: not-allowed;
   }
 
-  /* Liens & boutons : contour ; champs = anneau via .gourmand-input / classes locales */
   a:focus-visible,
   button:focus-visible,
   summary:focus-visible {
@@ -67,21 +67,21 @@
   }
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-/* Quiet Luxury Cards - Plus épurées, moins arrondies, pas d'ombres exagérées */
+/* ─── Cards ─────────────────────────────────────────────── */
 .gourmand-card {
   @apply bg-white rounded-2xl border border-gourmand-border shadow-sm transition-colors;
 }
 
 .gourmand-card-dark {
-  @apply bg-gourmand-chocolate text-white rounded-2xl transition-colors;
+  @apply rounded-2xl transition-colors;
+  background: linear-gradient(145deg, #2C1A0E 0%, #1A0D05 100%);
+  color: var(--color-gourmand-white);
 }
 
 .gourmand-card:active,
@@ -89,16 +89,21 @@
   @apply opacity-80;
 }
 
-/* Boutons premium - Simple, direct, à haut contraste */
+/* ─── Boutons ────────────────────────────────────────────── */
 .gourmand-btn-primary {
   @apply min-h-[44px] px-4 bg-gourmand-chocolate text-white font-semibold rounded-xl flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:ring-offset-2 focus-visible:ring-offset-gourmand-chocolate;
 }
 
-/* Bouton primaire compact (listes, cartes — style plus proche iOS) */
 .gourmand-btn-primary-compact {
   @apply min-h-[36px] px-3 py-2 text-xs font-semibold rounded-lg bg-gourmand-chocolate text-white flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-gourmand-chocolate;
+}
+
+.gourmand-btn-caramel {
+  @apply min-h-[44px] px-4 text-white font-semibold rounded-xl flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
+  background-color: var(--color-gourmand-caramel);
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35;
 }
 
 .gourmand-btn-strawberry {
@@ -114,38 +119,39 @@
   @apply text-xs font-semibold px-2 py-1 rounded-full;
 }
 
-/* Formulaires épurés */
+/* ─── Inputs ─────────────────────────────────────────────── */
 .gourmand-input {
   @apply min-h-[44px] bg-white border border-gourmand-border rounded-xl px-4 py-3 text-gourmand-chocolate font-medium shadow-sm;
   @apply transition-[color,box-shadow,border-color] duration-200;
   @apply focus:outline-none focus-visible:border-gourmand-chocolate focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/18 focus-visible:ring-offset-0;
 }
 
-/* Champs date : évite le débordement en grille étroite (430px, 2 colonnes) */
+/* Champs date */
 input[type='date'] {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
+/* ─── Typographie ────────────────────────────────────────── */
 .section-title {
-  /* Petit espace sous le titre = lié au champ en dessous ; l’écart avec la carte du dessus vient du parent (space-y) */
   @apply text-sm font-semibold text-gourmand-cocoa ml-4 mb-1.5;
 }
 
-/* Navigation IOS Native Feeling - Slim & Blurred */
+/* ─── Navigation ─────────────────────────────────────────── */
 .nav-blur {
-  @apply backdrop-blur-xl bg-white/80 border-t border-gourmand-border shadow-[0_-4px_24px_rgba(0,0,0,0.02)];
+  @apply backdrop-blur-xl border-t border-gourmand-border shadow-[0_-4px_24px_rgba(36,19,9,0.04)];
+  background: rgba(253, 248, 242, 0.88);
 }
 
+/* ─── Layout ─────────────────────────────────────────────── */
 .app-container {
-  @apply relative w-full h-full max-w-[430px] mx-auto bg-gourmand-bg overflow-hidden flex flex-col sm:shadow-[0_0_80px_rgba(0,0,0,0.05)] sm:border-x sm:border-gourmand-border;
+  @apply relative w-full h-full max-w-[430px] mx-auto bg-gourmand-bg overflow-hidden flex flex-col sm:shadow-[0_0_80px_rgba(36,19,9,0.06)] sm:border-x sm:border-gourmand-border;
   max-width: min(430px, 100%);
   overflow-x: hidden;
   padding-top: env(safe-area-inset-top);
 }
 
-/* Modales / overlays : évite le scroll horizontal parasite sur iOS */
 .modal-scroll {
   overflow-x: hidden;
   overflow-y: auto;
@@ -156,4 +162,27 @@ input[type='date'] {
 
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ─── Scale Modal ────────────────────────────────────────── */
+.scale-preset-btn {
+  @apply flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 border;
+}
+
+.scale-preset-btn-active {
+  @apply bg-gourmand-chocolate text-white border-gourmand-chocolate shadow-sm;
+}
+
+.scale-preset-btn-inactive {
+  @apply bg-white text-gourmand-cocoa border-gourmand-border;
+}
+
+/* ─── Marge visuelle ─────────────────────────────────────── */
+.margin-bar-track {
+  @apply h-1 w-full rounded-full overflow-hidden;
+  background-color: var(--color-gourmand-border);
+}
+
+.margin-bar-fill {
+  @apply h-full rounded-full transition-[width] duration-300;
 }
