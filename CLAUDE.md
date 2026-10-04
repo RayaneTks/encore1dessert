@@ -8,7 +8,7 @@ This application is a **mobile-first iOS utility** for artisanal pastry cost man
 
 **Key Design Principles:**
 1.  **Mobile-First/iOS Shell:** Fixed 430px container with safe area insets. Bottom navigation bar always sticky.
-2.  **Apple Gourmand Design System:** Palette defined via CSS custom properties in `src/index.css` — Chocolate (#2D1B12), Strawberry (#E94E4E), Biscuit (#C89666), Cream (#F5F2ED).
+2.  **Apple Gourmand Design System:** Palette `gourmand-*` in `src/index.css` — Chocolate (#241309), Strawberry (#B83232), Biscuit (#9B7558), Caramel (#C05621), Cream (#FDF8F2). UI rules: `.claude/skills/ui-encore`.
 3.  **UX:** Smooth Framer Motion transitions. Every entity clickable/editable. Toast notifications for feedback. ConfirmDialog for destructive actions.
 4.  **Data Architecture:** All types in `src/types/index.ts`. History entries use immutable snapshots with resolved names and frozen prices.
 
