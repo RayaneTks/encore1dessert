@@ -35,15 +35,18 @@ import { Toast } from './components/Toast';
 import { InstallPrompt } from './components/InstallPrompt';
 
 const CalculateScreen = lazy(() => import('./screens/CalculateScreen').then(m => ({ default: m.CalculateScreen })));
-const IngredientsScreen = lazy(() => import('./screens/IngredientsScreen').then(m => ({ default: m.IngredientsScreen })));
-const BasesScreen = lazy(() => import('./screens/BasesScreen').then(m => ({ default: m.BasesScreen })));
-const DessertsScreen = lazy(() => import('./screens/DessertsScreen').then(m => ({ default: m.DessertsScreen })));
+const AtelierScreen = lazy(() => import('./screens/AtelierScreen').then(m => ({ default: m.AtelierScreen })));
 const HistoryScreen = lazy(() => import('./screens/HistoryScreen').then(m => ({ default: m.HistoryScreen })));
 const CommandesScreen = lazy(() => import('./screens/CommandesScreen').then(m => ({ default: m.CommandesScreen })));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('calculate');
+  /** Dernière section ouverte dans l'Atelier : l'onglet y revient directement. */
+  const [lastAtelier, setLastAtelier] = useState<Tab>('desserts');
+  useEffect(() => {
+    if (activeTab === 'desserts' || activeTab === 'bases' || activeTab === 'ingredients') setLastAtelier(activeTab);
+  }, [activeTab]);
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -406,33 +409,20 @@ export default function App() {
                 showToast={showToast}
               />
             )}
-            {activeTab === 'desserts' && (
-              <DessertsScreen
-                key="desserts"
+            {(activeTab === 'desserts' || activeTab === 'bases' || activeTab === 'ingredients') && (
+              <AtelierScreen
+                key="atelier"
+                section={activeTab}
+                onSectionChange={setActiveTab}
                 desserts={desserts}
-                ingredients={ingredients}
-                bases={bases}
-                onSave={handleSaveDessert}
-                onDelete={handleDeleteDessert}
-                showToast={showToast}
-              />
-            )}
-            {activeTab === 'bases' && (
-              <BasesScreen
-                key="bases"
                 bases={bases}
                 ingredients={ingredients}
-                onSave={handleSaveBase}
-                onDelete={handleDeleteBase}
-                showToast={showToast}
-              />
-            )}
-            {activeTab === 'ingredients' && (
-              <IngredientsScreen
-                key="ingredients"
-                ingredients={ingredients}
-                onSave={handleSaveIngredient}
-                onDelete={handleDeleteIngredient}
+                onSaveDessert={handleSaveDessert}
+                onDeleteDessert={handleDeleteDessert}
+                onSaveBase={handleSaveBase}
+                onDeleteBase={handleDeleteBase}
+                onSaveIngredient={handleSaveIngredient}
+                onDeleteIngredient={handleDeleteIngredient}
                 showToast={showToast}
               />
             )}
@@ -475,7 +465,7 @@ export default function App() {
         </Suspense>
       </div>
 
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={t => setActiveTab(t === 'desserts' ? lastAtelier : t)} />
     </div>
   );
 }

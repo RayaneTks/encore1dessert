@@ -53,7 +53,7 @@ public/
 * **Propagation**: Changing an ingredient price auto-recalculates all bases and desserts that use it
 
 ## 🗣️ Vocabulaire UI (client non technique)
-Libellés visibles : onglets **Ventes** (ex-Compta), **Commandes** (ex-Ordres), **Caisse**, **Recettes**, **Préparations** (bases), **Ingrédients** (matières premières). Pas de jargon (ticket, dashboard, snapshot, Supabase) ni de TTC dans l'UI. Textes courts : un libellé + au plus une ligne d'aide. Les noms de code (`history`, `commandes`, `Base`) ne changent pas.
+Libellés visibles : **Ventes** (ex-Compta), **Commandes** (ex-Ordres), **Caisse**, **Atelier** (Desserts, Préparations = bases, Ingrédients = matières premières), **Réglages**. Pas de jargon (ticket, dashboard, snapshot, Supabase) ni de TTC dans l'UI. Textes courts : un libellé + au plus une ligne d'aide. Les noms de code (`history`, `commandes`, `Base`) ne changent pas.
 
 ## 🖼️ Images (`public/`)
 `apple-touch-icon.png` (180), `icon-192/512.png`, `icon-maskable-512.png`, `favicon-16/32.png`, `badge-96.png` (silhouette blanche pour les notifications). Icônes plein cadre carré, sans coins arrondis ni transparence (iOS/Android appliquent leur masque). Logo affiché dans l'app : `src/assets/logo.webp` (copie dans `public/logo.webp` pour l'écran de démarrage HTML). Écrans de lancement iOS : `public/splash/*` (12 tailles d'iPhone, fond #FDF8F2 + logo centré) référencés par `apple-touch-startup-image` dans `index.html`. `public/sw.js` met l'interface en cache (hors-ligne) mais jamais les données Supabase.
@@ -87,7 +87,9 @@ Tailwind CSS v4 with `@theme` directive. Two card variants:
 ## ⚠️ Key Constraints
 
 * **ConfirmDialog** has no `isOpen` prop — wrap in `<AnimatePresence>` and conditionally render
-* **BottomNav** has 6 tabs (flex-1, icon size 20) — adding a 7th requires redesign
+* **BottomNav** : 5 emplacements — Commandes, Atelier, **Caisse (centre, en relief)**, Ventes, Réglages. « Atelier » (`AtelierScreen`) regroupe Desserts / Préparations / Ingrédients (sous-onglets, dernière section mémorisée). Les tabs `desserts|bases|ingredients` existent toujours dans `Tab`. Ne pas ajouter d'onglet : mettre la fonctionnalité dans une section existante.
+* **Création rapide** : `QuantityPicker` (recherche, éléments choisis en tête) + `IngredientModal` permettent de créer un ingrédient depuis le formulaire d'une préparation ou d'un dessert sans le quitter.
+* **Caisse** : grille de tuiles 2 colonnes (toucher = ajouter, badge = quantité, − sur la tuile), panier repliable dans la barre d'encaissement.
 * **Notifications** are local only (fire on app open). Background push requires VAPID + server — not implemented
 * **SectionCard** uses `mb-0` — spacing handled by parent `space-y-*`. Do NOT add `mb-6` back; all screens use `space-y-3` or `space-y-4` containers
 * **SectionCard padding=true** → `p-4`. Use `padding={false}` for list-based content (divide-y rows handle their own padding)

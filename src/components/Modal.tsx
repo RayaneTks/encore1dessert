@@ -3,6 +3,9 @@ import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
+/** Pile des modales ouvertes : Échap ne ferme que celle du dessus. */
+const openModals: symbol[] = [];
+
 interface ModalProps {
   title: string;
   children: React.ReactNode;
@@ -14,13 +17,21 @@ interface ModalProps {
 export const Modal: React.FC<ModalProps> = ({ title, children, onClose, footer }) => {
   const reduceMotion = usePrefersReducedMotion();
 
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
+
   React.useEffect(() => {
+    const id = Symbol('modal');
+    openModals.push(id);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && openModals[openModals.length - 1] === id) onCloseRef.current();
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      openModals.splice(openModals.indexOf(id), 1);
+    };
+  }, []);
 
   return (
     <motion.div

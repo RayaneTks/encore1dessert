@@ -20,7 +20,7 @@ Utilisateur : pâtissier non technique, sur iPhone, mains parfois occupées. Cha
 - Cartes : `.gourmand-card` (clair), `.gourmand-card-dark` (chocolat). Ne pas imbriquer de cartes.
 - `SectionCard` : pas de `mb-6` (espacement via `space-y-3/4` du parent). `padding={false}` pour les listes.
 - `ConfirmDialog` : pas de prop `isOpen`, l'envelopper dans `<AnimatePresence>`.
-- `BottomNav` : 6 onglets max (un 7ᵉ demande une refonte).
+- `BottomNav` : 5 emplacements, Caisse au centre en relief. Pas de 6ᵉ onglet : ranger dans l'Atelier ou les Réglages.
 
 ## Interaction
 - Boutons : verbe + objet (« Livrer la commande »), jamais « OK » / « Valider ». Un seul bouton primaire par vue.

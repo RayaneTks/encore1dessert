@@ -8,6 +8,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
 import { ScaleModal } from '../components/ScaleModal';
+import { QuantityPicker } from '../components/QuantityPicker';
+import { IngredientModal } from '../components/IngredientModal';
 import {
   fmt,
   calculateDessertCost,
@@ -25,16 +27,19 @@ interface Props {
   bases: Base[];
   onSave: (dessert: Dessert) => Promise<Dessert | null>;
   onDelete: (id: string) => Promise<void>;
+  onSaveIngredient: (ing: RawIngredient) => Promise<RawIngredient | null>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, onSave, onDelete, showToast }) => {
+export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, onSave, onDelete, onSaveIngredient, showToast }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Dessert | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Dessert | null>(null);
   const [scaleTarget, setScaleTarget] = useState<Dessert | null>(null);
   const [saving, setSaving] = useState(false);
+  const [newIngOpen, setNewIngOpen] = useState(false);
+  const [newIngName, setNewIngName] = useState('');
 
   /* Form state */
   const [name, setName] = useState('');
@@ -149,8 +154,8 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
       className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
-        title="Recettes"
-        description={`${desserts.length} recette${desserts.length > 1 ? 's' : ''} disponibles`}
+        title="Desserts"
+        description={`${desserts.length} dessert${desserts.length > 1 ? 's' : ''}`}
         action={
           <IconActionButton
             disabled={ingredients.length === 0 && bases.length === 0}
@@ -437,79 +442,26 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                 </div>
 
                 {bases.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <Beaker size={14} /> Préparations maison (g)
-                    </h4>
-                    <div className="space-y-2">
-                      {bases.map(b => (
-                        <div key={b.id} className="flex items-center justify-between gap-2 p-3 bg-gourmand-bg rounded-xl">
-                          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
-                            <span className="text-xl w-9 text-center shrink-0" aria-hidden>{b.emoji}</span>
-                            <span className="truncate">{b.name}</span>
-                          </span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setCompMap(prev => ({ ...prev, [b.id]: { type: 'base', qty: Math.max(0, (prev[b.id]?.qty || 0) - 10) } }))}
-                              className="h-11 w-11 rounded-lg border border-gourmand-border bg-white flex items-center justify-center text-lg font-bold text-gourmand-chocolate active:bg-gourmand-bg"
-                            >−</button>
-                            <input
-                              type="number" inputMode="decimal" placeholder="0"
-                              value={compMap[b.id]?.qty || ''}
-                              className="w-20 h-11 rounded-xl border border-gourmand-border bg-white px-2 text-center text-sm font-bold text-gourmand-chocolate focus:border-gourmand-chocolate focus:outline-none"
-                              onChange={e => setCompMap(prev => ({ ...prev, [b.id]: { type: 'base', qty: parseFloat(e.target.value) || 0 } }))}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setCompMap(prev => ({ ...prev, [b.id]: { type: 'base', qty: (prev[b.id]?.qty || 0) + 10 } }))}
-                              className="h-11 w-11 rounded-lg border border-gourmand-border bg-white flex items-center justify-center text-lg font-bold text-gourmand-chocolate active:bg-gourmand-bg"
-                            >+</button>
-                            <span className="text-xs font-medium text-gourmand-biscuit w-4">g</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <QuantityPicker
+                    title={<><Beaker size={14} /> Préparations maison</>}
+                    items={bases.map(b => ({ id: b.id, emoji: b.emoji, name: b.name, unit: 'g', step: 10 }))}
+                    quantities={Object.fromEntries(Object.entries(compMap).filter(([, c]) => c.type === 'base').map(([id, c]) => [id, c.qty]))}
+                    onChange={(id, qty) => setCompMap(prev => ({ ...prev, [id]: { type: 'base', qty } }))}
+                  />
                 )}
 
-                <div>
-                  <h4 className="text-xs font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Apple size={14} /> Ingrédients
-                  </h4>
-                  <div className="space-y-2">
-                    {ingredients.map(i => {
-                      const iUnit = i.unit === 'u' ? 'u' : i.unit === 'L' ? 'ml' : 'g';
-                      return (
-                        <div key={i.id} className="flex items-center justify-between gap-2 p-3 bg-gourmand-bg rounded-xl">
-                          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
-                            <span className="text-xl w-9 text-center shrink-0" aria-hidden>{i.emoji}</span>
-                            <span className="truncate">{i.name}</span>
-                          </span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setCompMap(prev => ({ ...prev, [i.id]: { type: 'ingredient', qty: Math.max(0, (prev[i.id]?.qty || 0) - (i.unit === 'u' ? 1 : 10)) } }))}
-                              className="h-11 w-11 rounded-lg border border-gourmand-border bg-white flex items-center justify-center text-lg font-bold text-gourmand-chocolate active:bg-gourmand-bg"
-                            >−</button>
-                            <input
-                              type="number" inputMode="decimal" placeholder="0"
-                              value={compMap[i.id]?.qty || ''}
-                              className="w-20 h-11 rounded-xl border border-gourmand-border bg-white px-2 text-center text-sm font-bold text-gourmand-chocolate focus:border-gourmand-chocolate focus:outline-none"
-                              onChange={e => setCompMap(prev => ({ ...prev, [i.id]: { type: 'ingredient', qty: parseFloat(e.target.value) || 0 } }))}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setCompMap(prev => ({ ...prev, [i.id]: { type: 'ingredient', qty: (prev[i.id]?.qty || 0) + (i.unit === 'u' ? 1 : 10) } }))}
-                              className="h-11 w-11 rounded-lg border border-gourmand-border bg-white flex items-center justify-center text-lg font-bold text-gourmand-chocolate active:bg-gourmand-bg"
-                            >+</button>
-                            <span className="text-xs font-medium text-gourmand-biscuit w-4">{iUnit}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <QuantityPicker
+                  title={<><Apple size={14} /> Ingrédients</>}
+                  items={ingredients.map(i => ({
+                    id: i.id, emoji: i.emoji, name: i.name,
+                    unit: i.unit === 'u' ? 'u' : i.unit === 'L' ? 'ml' : 'g',
+                    step: i.unit === 'u' ? 1 : 10,
+                  }))}
+                  quantities={Object.fromEntries(Object.entries(compMap).filter(([, c]) => c.type === 'ingredient').map(([id, c]) => [id, c.qty]))}
+                  onChange={(id, qty) => setCompMap(prev => ({ ...prev, [id]: { type: 'ingredient', qty } }))}
+                  onCreate={typed => { setNewIngName(typed); setNewIngOpen(true); }}
+                  createLabel="Nouvel ingrédient"
+                />
 
                 <textarea
                   placeholder="Notes techniques..."
@@ -557,6 +509,18 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
       </AnimatePresence>
 
       {/* Scale modal */}
+      <AnimatePresence>
+        {newIngOpen && (
+          <IngredientModal
+            ingredient={null}
+            defaultName={newIngName}
+            onSave={onSaveIngredient}
+            onClose={() => setNewIngOpen(false)}
+            showToast={showToast}
+          />
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {scaleTarget && (
           <ScaleModal

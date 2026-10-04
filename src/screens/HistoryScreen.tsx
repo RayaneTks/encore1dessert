@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, ChevronDown, X, Settings, ChevronRight, RotateCcw, TrendingUp } from 'lucide-react';
+import { Trash2, ChevronDown, X, ChevronRight, RotateCcw, TrendingUp } from 'lucide-react';
 import { HistoryEntry, Commande, Tab, StatPeriod, DESSERT_PRODUCT_KIND_OPTIONS } from '../types';
 import { PageHeader } from '../components/PageHeader';
-import { IconActionButton } from '../components/IconActionButton';
 import { FilterPillRow, FilterSortByCustomer, FilterField } from '../components/FilterControls';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -128,14 +127,6 @@ export const HistoryScreen: React.FC<Props> = ({
       <PageHeader
         title="Ventes"
         description={`${periodLabel} · ${stats.totalSales} vente${stats.totalSales > 1 ? 's' : ''}`}
-        action={
-          <IconActionButton
-            size="compact"
-            onClick={() => setActiveTab('settings')}
-            icon={<Settings size={18} strokeWidth={2} />}
-            label="Ouvrir les réglages"
-          />
-        }
       />
 
       <div className="px-4 space-y-4">

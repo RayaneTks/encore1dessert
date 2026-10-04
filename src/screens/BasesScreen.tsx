@@ -8,6 +8,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
 import { ScaleModal } from '../components/ScaleModal';
+import { QuantityPicker } from '../components/QuantityPicker';
+import { IngredientModal } from '../components/IngredientModal';
 import { fmt, findIngredient, calculateBaseCost, calculateBaseCostPerKg } from '../lib/calculations';
 
 /** Réutilise le libellé d'une famille existante (casse / espaces ignorés) pour éviter les doublons « Flan » / « flan ». */
@@ -25,16 +27,19 @@ interface Props {
   ingredients: RawIngredient[];
   onSave: (base: Base) => Promise<Base | null>;
   onDelete: (id: string) => Promise<void>;
+  onSaveIngredient: (ing: RawIngredient) => Promise<RawIngredient | null>;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDelete, showToast }) => {
+export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDelete, onSaveIngredient, showToast }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Base | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Base | null>(null);
   const [scaleTarget, setScaleTarget] = useState<Base | null>(null);
   const [saving, setSaving] = useState(false);
+  const [newIngOpen, setNewIngOpen] = useState(false);
+  const [newIngName, setNewIngName] = useState('');
   /** Famille ouverte (liste de ses variantes). null = liste générale. */
   const [openFamily, setOpenFamily] = useState<string | null>(null);
 
@@ -400,44 +405,18 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                 </div>
               </div>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-gourmand-biscuit mb-3 flex items-center gap-1.5 ml-1">
-                  <Apple size={14} /> Ingrédients
-                </p>
-                <div className="max-h-60 overflow-y-auto scrollbar-hide space-y-2">
-                  {ingredients.map(ing => {
-                    const val = compMap[ing.id] || 0;
-                    const ingUnit = ing.unit === 'u' ? 'u' : ing.unit === 'L' ? 'ml' : 'g';
-                    return (
-                      <div key={ing.id} className="flex items-center justify-between p-3 bg-gourmand-bg rounded-xl gap-2">
-                        <span className="text-sm font-medium flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-xl shrink-0" aria-hidden>{ing.emoji}</span>
-                          <span className="truncate">{ing.name}</span>
-                        </span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setCompMap(prev => ({ ...prev, [ing.id]: Math.max(0, (prev[ing.id] || 0) - (ing.unit === 'u' ? 1 : 10)) }))}
-                            className="h-11 w-11 rounded-lg border border-gourmand-border bg-white flex items-center justify-center text-lg font-bold text-gourmand-chocolate active:bg-gourmand-bg"
-                          >−</button>
-                          <input
-                            type="number" inputMode="decimal" placeholder="0"
-                            value={val || ''}
-                            className="w-20 h-11 rounded-xl border border-gourmand-border bg-white px-2 text-center text-sm font-bold text-gourmand-chocolate focus:border-gourmand-chocolate focus:outline-none"
-                            onChange={e => setCompMap(prev => ({ ...prev, [ing.id]: parseFloat(e.target.value) || 0 }))}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setCompMap(prev => ({ ...prev, [ing.id]: (prev[ing.id] || 0) + (ing.unit === 'u' ? 1 : 10) }))}
-                            className="h-11 w-11 rounded-lg border border-gourmand-border bg-white flex items-center justify-center text-lg font-bold text-gourmand-chocolate active:bg-gourmand-bg"
-                          >+</button>
-                          <span className="text-xs font-medium text-gourmand-biscuit w-5">{ingUnit}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <QuantityPicker
+                title={<><Apple size={14} /> Ingrédients</>}
+                items={ingredients.map(ing => ({
+                  id: ing.id, emoji: ing.emoji, name: ing.name,
+                  unit: ing.unit === 'u' ? 'u' : ing.unit === 'L' ? 'ml' : 'g',
+                  step: ing.unit === 'u' ? 1 : 10,
+                }))}
+                quantities={compMap}
+                onChange={(id, qty) => setCompMap(prev => ({ ...prev, [id]: qty }))}
+                onCreate={typed => { setNewIngName(typed); setNewIngOpen(true); }}
+                createLabel="Nouvel ingrédient"
+              />
 
               <textarea
                 placeholder="Notes techniques..."
@@ -449,6 +428,18 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
               </button>
             </div>
           </Modal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {newIngOpen && (
+          <IngredientModal
+            ingredient={null}
+            defaultName={newIngName}
+            onSave={onSaveIngredient}
+            onClose={() => setNewIngOpen(false)}
+            showToast={showToast}
+          />
         )}
       </AnimatePresence>
 

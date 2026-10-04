@@ -207,3 +207,9 @@ input[type='date'] {
 .margin-bar-fill {
   @apply h-full rounded-full transition-[width] duration-300;
 }
+
+@keyframes pop {
+  0% { transform: scale(0.6); }
+  70% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
