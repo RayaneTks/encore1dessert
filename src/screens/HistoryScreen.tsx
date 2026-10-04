@@ -198,28 +198,9 @@ export const HistoryScreen: React.FC<Props> = ({
               <p className="text-xl font-semibold opacity-80">{fmt(stats.totalCost)}</p>
             </div>
           </div>
-        </div>
-
-        {/* KPI grid 2×2 */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="gourmand-card p-4 flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-2">Part de bénéfice</p>
-            <p className={`text-2xl font-bold ${marginColor(stats.marginRate)}`}>{fmtPct(stats.marginRate)}</p>
-            {/* Mini barre marge */}
-            <div className="margin-bar-track mt-2">
-              <div
-                className="margin-bar-fill"
-                style={{
-                  width: `${Math.min(100, Math.max(0, stats.marginRate * 100))}%`,
-                  backgroundColor: stats.marginRate >= 0.6 ? '#16a34a' : stats.marginRate >= 0.4 ? '#f59e0b' : '#ef4444',
-                }}
-              />
-            </div>
-          </div>
-          <div className="gourmand-card p-4 flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-2">Pièces vendues</p>
-            <p className="text-2xl font-bold">{stats.totalDessertsSold}</p>
-          </div>
+          <p className="mt-4 text-sm font-medium opacity-80">
+            <span className={`font-bold ${stats.marginRate >= 0.6 ? 'text-emerald-400' : stats.marginRate >= 0.4 ? 'text-amber-300' : 'text-red-300'}`}>{fmtPct(stats.marginRate)}</span> de bénéfice · {stats.totalDessertsSold} pièce{stats.totalDessertsSold > 1 ? 's' : ''} vendue{stats.totalDessertsSold > 1 ? 's' : ''}
+          </p>
         </div>
 
         {/* Top 3 */}

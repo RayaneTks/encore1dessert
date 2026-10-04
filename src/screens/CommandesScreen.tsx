@@ -289,6 +289,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
   const [formOpen, setFormOpen] = useState(false);
   const [detailCommand, setDetailCommand] = useState<Commande | null>(null);
   /** Panneau « Options & détail » dans le modal commande (replié par défaut). */
+  const [formMoreOpen, setFormMoreOpen] = useState(false);
   const [detailMoreOpen, setDetailMoreOpen] = useState(false);
   /** Ligne desserts nouvellement ajoutée (flash visuel). */
   const [detailHighlightLineIdx, setDetailHighlightLineIdx] = useState<number | null>(null);
@@ -815,7 +816,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
 
             <div className="px-2 space-y-3">
               {filtered.length === 0 && (
-                <div className="text-center py-16 text-gourmand-biscuit">
+                <div className="flex flex-col items-center py-16 text-center text-gourmand-biscuit">
                   <Package size={40} className="mx-auto mb-3 opacity-30" aria-hidden />
                   <p className="text-sm font-medium">Aucune commande pour le moment</p>
                   <button type="button" onClick={openNewCommandForm} className="gourmand-btn-primary-compact mt-4 px-5">
@@ -1082,15 +1083,21 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               </div>
 
               <div>
+                <FormLabel>Client</FormLabel>
+                <div className="mt-1">
+                  <FilterChipRow
+                    options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
+                    value={editing.customerType}
+                    onChange={v => setEditing(prev => ({ ...prev, customerType: v }))}
+                    aria-label="Type de client"
+                  />
+                </div>
+              </div>
+
+
+              <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Desserts</span>
-                  <button
-                    type="button"
-                    onClick={() => addItem()}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gourmand-chocolate border border-gourmand-border bg-white active:bg-gourmand-bg cursor-pointer min-h-11"
-                  >
-                    <Plus size={16} strokeWidth={2.25} /> Ligne
-                  </button>
+                  <FormLabel>Desserts commandés</FormLabel>
                 </div>
                 <div className="space-y-2">
                   {editing.items.map((item, idx) => (
@@ -1142,41 +1149,73 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="min-w-0">
-                  <FormLabel>Commandé le</FormLabel>
-                  <input
-                    type="date"
-                    className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
-                    value={editing.orderDate}
-                    onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <FormLabel>Livraison le</FormLabel>
-                  <input
-                    type="date"
-                    className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
-                    value={editing.deliveryDate}
-                    onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => addItem()}
+                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gourmand-border bg-white text-sm font-semibold text-gourmand-chocolate active:bg-gourmand-bg"
+                >
+                  <Plus size={16} strokeWidth={2.25} /> Ajouter un dessert
+                </button>
               </div>
 
               <div>
-                <FormLabel>Type client</FormLabel>
-                <div className="mt-1">
-                  <FilterChipRow
-                    options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
-                    value={editing.customerType}
-                    onChange={v => setEditing(prev => ({ ...prev, customerType: v }))}
-                    aria-label="Type de client"
-                  />
+                <FormLabel>Livraison le</FormLabel>
+                <div className="mb-2 mt-1 flex gap-2">
+                  {[['Aujourd’hui', 0], ['Demain', 1], ['Dans 2 jours', 2]].map(([label, n]) => {
+                    const iso = (() => { const d = new Date(); d.setDate(d.getDate() + (n as number)); return d.toLocaleDateString('sv-SE'); })();
+                    const on = editing.deliveryDate === iso;
+                    return (
+                      <button
+                        key={label as string}
+                        type="button"
+                        onClick={() => setEditing(prev => ({ ...prev, deliveryDate: iso }))}
+                        className={`min-h-11 flex-1 rounded-xl border px-2 text-sm font-semibold transition-colors ${on ? 'border-gourmand-chocolate bg-gourmand-chocolate text-white' : 'border-gourmand-border bg-white text-gourmand-cocoa'}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
+                <input
+                  type="date"
+                  className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
+                  value={editing.deliveryDate}
+                  onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                />
               </div>
 
+              <div>
+                <FormLabel>Notes</FormLabel>
+                <textarea
+                  className="gourmand-input w-full resize-none min-h-[80px] text-base"
+                  rows={2}
+                  placeholder="Allergies, adresse, personnalisation…"
+                  value={editing.notes}
+                  onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFormMoreOpen(o => !o)}
+                aria-expanded={formMoreOpen}
+                className="flex min-h-11 w-full items-center justify-between rounded-xl px-1 text-sm font-semibold text-gourmand-biscuit"
+              >
+                Plus d’options (rappels, date de commande)
+                <ChevronDown size={18} className={`transition-transform ${formMoreOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {formMoreOpen && (
+                <div className="space-y-5">
+                  <div className="min-w-0">
+                    <FormLabel>Commandé le</FormLabel>
+                    <input
+                      type="date"
+                      className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
+                      value={editing.orderDate}
+                      onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
+                    />
+                  </div>
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Bell size={16} className="text-gourmand-biscuit shrink-0" aria-hidden />
@@ -1210,16 +1249,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                 </div>
               </div>
 
-              <div>
-                <FormLabel>Notes</FormLabel>
-                <textarea
-                  className="gourmand-input w-full resize-none min-h-[100px] text-base"
-                  rows={3}
-                  placeholder="Allergies, adresse, personnalisation…"
-                  value={editing.notes}
-                  onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
+                </div>
+              )}
 
               <button
                 type="button"

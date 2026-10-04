@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
@@ -33,7 +34,7 @@ export const Modal: React.FC<ModalProps> = ({ title, children, onClose, footer }
     };
   }, []);
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: reduceMotion ? 1 : 0 }}
       animate={{ opacity: 1 }}
@@ -80,6 +81,7 @@ export const Modal: React.FC<ModalProps> = ({ title, children, onClose, footer }
           </div>
         ) : null}
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 };

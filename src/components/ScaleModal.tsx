@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
+import { createPortal } from 'react-dom';
 import { X, Copy, Check, ChefHat, Scale } from 'lucide-react';
 import { Dessert, Base, RawIngredient } from '../types';
 import {
@@ -194,7 +195,7 @@ export const ScaleModal: React.FC<Props> = ({
   const activePreset =
     mode === 'multiplier' && !customInput.trim() ? PRESETS.find(p => p === multiplier) ?? null : null;
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -433,6 +434,7 @@ export const ScaleModal: React.FC<Props> = ({
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 };
