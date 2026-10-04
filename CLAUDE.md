@@ -45,7 +45,7 @@ public/
 ### Key Concepts
 
 * **Matières Premières** (Ingredients): Raw purchased materials with price/kg
-* **Bases** (Preparations): House-made components from ingredients (e.g., caramel, dough)
+* **Bases** (Preparations): House-made components from ingredients (e.g., caramel, dough). Extra fields: `family` (string, `''` = standalone; same label = variants of one family, shown as a single card in `BasesScreen` that opens the variant list via `openFamily`), `yieldQty` (number | null) + `yieldLabel` (e.g. 5 / « entremets Ø18 cm »), scaled by the multiplier in `ScaleModal`. Each variant is a full duplicated recipe (no shared parent). Family match is exact/case-sensitive — a typo creates a new family. `ScaleModal` on a base has two modes: « Multiplier » (presets/free input) or « Par ingrédient » (factor = available qty / recipe qty of the chosen ingredient).
 * **Desserts**: Finished products composed of bases + direct ingredients, with sell price
 * **History (Compta)**: Immutable sale records in `history_entries` with `SnapshotLine[]` and frozen unit/total revenue at sale time (`catalogueUnitAtSale`, `revenue_caption`, `bundle_offer_label_at_sale`, `sale_label`, etc.). **Do not** recalculate past rows when catalog or bundle rules change; new sales use current rules. Deleting a **commande** does **not** delete history rows (see `deleteCommande` in `db.ts` — compta stays intact; only explicit Compta UI deletion removes entries).
 * **Commandes (Ordres)**: Advance orders with `CommandeItem[]`, `orderDate`, `deliveryDate`, status `pending` | `ready` | `delivered`, `notifyBefore`. On **Livrée**, set `deliveryDate` to the **actual** calendar day (`localDateISO()`). **List Ordres** hides `delivered` when `toCalendarISODate(deliveryDate) < today` (J+1 after delivery day: free space; data still in Supabase and in Compta if sold). **En retard** badge for `pending`/`ready` when scheduled delivery is past. Dates from API are normalized in `rowToCommande` via `toCalendarISODate` so string comparisons are safe (e.g. `2026-4-24` vs `2026-04-25`). `CommandesScreen` syncs the calendar day every ~5s and on focus/visibility so the list updates after midnight.
@@ -55,6 +55,8 @@ public/
 ## 🗄️ Supabase Schema
 
 Tables: `raw_ingredients`, `bases`, `base_components`, `desserts`, `dessert_components`, `history_entries`, `commandes`
+
+**bases** extra columns (migration `supabase/migrations/20261004_bases_family_yield.sql`, must be applied manually): `family text not null default ''`, `yield_qty numeric`, `yield_label text not null default ''`. Without them `upsertBase` fails with an explicit error.
 
 **commandes** columns: `id, client_name, items (JSONB), order_date, delivery_date, notes, status, notify_before (JSONB), created_at`
 

@@ -24,6 +24,8 @@ interface Props {
   onClose: () => void;
   /** Quantité initiale pré-remplie (ex : depuis le board cuisine) */
   initialQuantity?: number;
+  /** Bases uniquement : crée une nouvelle variante pré-remplie avec les quantités adaptées (facteur en argument). */
+  onSaveVariant?: (factor: number) => void;
 }
 
 const PRESETS = [1, 2, 3, 4, 5, 10] as const;
@@ -46,6 +48,7 @@ export const ScaleModal: React.FC<Props> = ({
   bases,
   onClose,
   initialQuantity,
+  onSaveVariant,
 }) => {
   const baseServings = target.type === 'dessert' ? target.item.servings : 1;
   const initialMultiplier =
@@ -419,6 +422,15 @@ export const ScaleModal: React.FC<Props> = ({
               )}
             </button>
           </div>
+          {onSaveVariant && target.type === 'base' && (
+            <button
+              type="button"
+              onClick={() => onSaveVariant(activeMultiplier)}
+              className="w-full rounded-xl border border-gourmand-border bg-white px-4 py-3 text-sm font-bold text-gourmand-chocolate transition-all active:scale-95"
+            >
+              Enregistrer comme nouvelle variante
+            </button>
+          )}
         </div>
       </motion.div>
     </motion.div>

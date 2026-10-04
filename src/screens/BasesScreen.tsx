@@ -10,6 +10,14 @@ import { FormLabel } from '../components/FormLabel';
 import { ScaleModal } from '../components/ScaleModal';
 import { fmt, findIngredient, calculateBaseCost, calculateBaseCostPerKg } from '../lib/calculations';
 
+/** Réutilise le libellé d'une famille existante (casse / espaces ignorés) pour éviter les doublons « Flan » / « flan ». */
+function canonicalFamily(input: string, bases: Base[]): string {
+  const clean = input.trim().replace(/\s+/g, ' ');
+  if (!clean) return '';
+  const key = clean.toLocaleLowerCase('fr');
+  return bases.find(b => b.family && b.family.toLocaleLowerCase('fr') === key)?.family ?? clean;
+}
+
 const CATEGORIES = ['Fond', 'Ganache', 'Insert', 'Coulis', 'Crème', 'Biscuit', 'Autre'];
 
 interface Props {
@@ -46,6 +54,22 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
     setShowForm(true);
   };
 
+  /** Ouvre le formulaire de création pré-rempli avec la recette adaptée (rien n'est enregistré avant validation). */
+  const openVariantFrom = (base: Base, factor: number) => {
+    const round = (n: number) => Math.round(n * 10) / 10;
+    const map: Record<string, number> = {};
+    base.components.forEach(c => { map[c.ingredientId] = round(c.quantity * factor); });
+    const label = `×${round(factor)}`;
+    setEditItem(null);
+    setName(`${base.name} ${label}`); setEmoji(base.emoji); setCategory(base.category); setNotes(base.notes);
+    setFamily(base.family);
+    setYieldQty(base.yieldQty != null ? String(round(base.yieldQty * factor)) : '');
+    setYieldLabel(base.yieldLabel);
+    setCompMap(map);
+    setScaleTarget(null);
+    setShowForm(true);
+  };
+
   const openEdit = (base: Base) => {
     setEditItem(base);
     setName(base.name); setEmoji(base.emoji); setCategory(base.category); setNotes(base.notes);
@@ -71,7 +95,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
     const base: Base = {
       id: editItem?.id || 'base-' + Date.now(),
       name, category, emoji, notes, components,
-      family: family.trim(),
+      family: canonicalFamily(family, bases),
       yieldQty: yieldQty.trim() ? yq : null,
       yieldLabel: yieldLabel.trim(),
       createdAt: editItem?.createdAt || new Date().toISOString(),
@@ -446,6 +470,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
             ingredients={ingredients}
             bases={bases}
             onClose={() => setScaleTarget(null)}
+            onSaveVariant={factor => openVariantFrom(scaleTarget, factor)}
           />
         )}
       </AnimatePresence>
