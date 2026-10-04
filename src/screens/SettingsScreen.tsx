@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Target, RotateCcw, Donut, Plus, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Target, RotateCcw, Plus, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
+import logo from '../assets/logo.webp';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import { SettingsRow } from '../components/SettingsRow';
@@ -402,12 +403,7 @@ export const SettingsScreen: React.FC<Props> = ({
         </section>
 
         <footer className="pt-4 pb-6 text-center border-t border-gourmand-border/40">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-gourmand-border bg-white text-gourmand-chocolate shadow-sm" aria-hidden>
-            <Donut size={28} strokeWidth={1.75} />
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gourmand-cocoa/70">
-            Encore 1 Dessert
-          </p>
+          <img src={logo} alt="Encore 1 Dessert" className="mx-auto h-auto w-44" />
           <button
             type="button"
             onClick={() => {

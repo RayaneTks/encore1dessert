@@ -10,8 +10,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'Encore1Dessert', {
       body: data.body || '',
-      icon: '/apple-touch-icon.png',
-      badge: '/favicon.png',
+      icon: '/icon-192.png',
+      badge: '/badge-96.png',
       tag: data.tag || 'e1d-notif',
       data: data,
     })
