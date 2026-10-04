@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, ChevronDown, Beaker, Apple, Scale } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronLeft, ChevronRight, Beaker, Apple, Scale, FolderOpen } from 'lucide-react';
 import { Base, RawIngredient } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
@@ -27,22 +27,29 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
   const [deleteTarget, setDeleteTarget] = useState<Base | null>(null);
   const [scaleTarget, setScaleTarget] = useState<Base | null>(null);
   const [saving, setSaving] = useState(false);
+  /** Famille ouverte (liste de ses variantes). null = liste générale. */
+  const [openFamily, setOpenFamily] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🍯');
   const [category, setCategory] = useState('Fond');
   const [notes, setNotes] = useState('');
+  const [family, setFamily] = useState('');
+  const [yieldQty, setYieldQty] = useState('');
+  const [yieldLabel, setYieldLabel] = useState('');
   const [compMap, setCompMap] = useState<Record<string, number>>({});
 
   const openAdd = () => {
     setEditItem(null);
     setName(''); setEmoji('🍯'); setCategory('Fond'); setNotes(''); setCompMap({});
+    setFamily(openFamily ?? ''); setYieldQty(''); setYieldLabel('');
     setShowForm(true);
   };
 
   const openEdit = (base: Base) => {
     setEditItem(base);
     setName(base.name); setEmoji(base.emoji); setCategory(base.category); setNotes(base.notes);
+    setFamily(base.family); setYieldQty(base.yieldQty != null ? String(base.yieldQty) : ''); setYieldLabel(base.yieldLabel);
     const map: Record<string, number> = {};
     base.components.forEach(c => { map[c.ingredientId] = c.quantity; });
     setCompMap(map);
@@ -57,10 +64,16 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
     if (components.length === 0) { showToast('Veuillez ajouter au moins un ingrédient', 'error'); return; }
     if (!emoji.trim()) { showToast('Icône requise', 'error'); return; }
 
+    const yq = parseFloat(yieldQty.replace(',', '.'));
+    if (yieldQty.trim() && !(Number.isFinite(yq) && yq > 0)) { showToast('Rendement invalide', 'error'); return; }
+
     setSaving(true);
     const base: Base = {
       id: editItem?.id || 'base-' + Date.now(),
       name, category, emoji, notes, components,
+      family: family.trim(),
+      yieldQty: yieldQty.trim() ? yq : null,
+      yieldLabel: yieldLabel.trim(),
       createdAt: editItem?.createdAt || new Date().toISOString(),
     };
     const result = await onSave(base);
@@ -79,6 +92,21 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
     setExpandedId(null);
   };
 
+  /* ─── Regroupement par famille ─── */
+  const families = useMemo(() => {
+    const map = new Map<string, Base[]>();
+    bases.forEach(b => {
+      if (!b.family) return;
+      map.set(b.family, [...(map.get(b.family) ?? []), b]);
+    });
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'fr'));
+  }, [bases]);
+  const standalone = useMemo(() => bases.filter(b => !b.family), [bases]);
+  // Si la dernière variante est supprimée / déplacée, on revient à la liste générale.
+  const familyBases = openFamily !== null ? bases.filter(b => b.family === openFamily) : [];
+  const effectiveFamily = openFamily !== null && familyBases.length > 0 ? openFamily : null;
+  const visibleBases = effectiveFamily !== null ? familyBases : standalone;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -87,8 +115,12 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
       className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
-        title="Préparations"
-        description={`${bases.length} base${bases.length > 1 ? 's' : ''} maison`}
+        title={effectiveFamily ?? 'Préparations'}
+        description={
+          effectiveFamily !== null
+            ? `${familyBases.length} variante${familyBases.length > 1 ? 's' : ''}`
+            : `${bases.length} base${bases.length > 1 ? 's' : ''} maison`
+        }
         action={
           <IconActionButton
             onClick={openAdd}
@@ -108,7 +140,37 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
       )}
 
       <div className="px-4 space-y-3">
-        {bases.map(base => {
+        {effectiveFamily !== null && (
+          <button
+            type="button"
+            onClick={() => setOpenFamily(null)}
+            className="flex items-center gap-1 text-sm font-semibold text-gourmand-biscuit active:opacity-60"
+          >
+            <ChevronLeft size={16} /> Toutes les préparations
+          </button>
+        )}
+
+        {effectiveFamily === null && families.map(([fam, members]) => (
+          <button
+            key={fam}
+            type="button"
+            onClick={() => setOpenFamily(fam)}
+            className="gourmand-card flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-gourmand-bg"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gourmand-border/50 bg-gourmand-bg text-gourmand-biscuit">
+              <FolderOpen size={22} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-semibold leading-tight text-gourmand-chocolate">{fam}</p>
+              <p className="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-wide text-gourmand-biscuit">
+                {members.length} variante{members.length > 1 ? 's' : ''} · {members.slice(0, 3).map(m => m.name).join(', ')}{members.length > 3 ? '…' : ''}
+              </p>
+            </div>
+            <ChevronRight size={18} className="shrink-0 text-gourmand-biscuit" />
+          </button>
+        ))}
+
+        {visibleBases.map(base => {
           const { totalCost, totalWeight } = calculateBaseCost(base, ingredients);
           const costPerKg = calculateBaseCostPerKg(base, ingredients);
           const isExpanded = expandedId === base.id;
@@ -193,6 +255,13 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                         </div>
                       </div>
 
+                      {base.yieldQty != null && base.yieldQty > 0 && (
+                        <div className="rounded-xl bg-gourmand-bg p-4">
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit">Ce que je peux faire avec cette recette</p>
+                          <p className="text-sm font-semibold text-gourmand-chocolate">🍰 {base.yieldQty} {base.yieldLabel}</p>
+                        </div>
+                      )}
+
                       {base.notes && (
                         <p className="text-xs text-gourmand-cocoa bg-gourmand-bg/50 p-3 rounded-xl">{base.notes}</p>
                       )}
@@ -275,6 +344,35 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                       {c}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div>
+                <FormLabel>Famille (optionnel)</FormLabel>
+                <input
+                  list="base-families"
+                  placeholder="Ex : Appareil à flan — pour regrouper les variantes"
+                  className="gourmand-input w-full"
+                  value={family} onChange={e => setFamily(e.target.value)}
+                />
+                <datalist id="base-families">
+                  {families.map(([fam]) => <option key={fam} value={fam} />)}
+                </datalist>
+              </div>
+
+              <div>
+                <FormLabel>Rendement (optionnel)</FormLabel>
+                <div className="flex gap-2">
+                  <input
+                    type="number" inputMode="decimal" placeholder="5"
+                    className="gourmand-input w-20 text-center"
+                    value={yieldQty} onChange={e => setYieldQty(e.target.value)}
+                  />
+                  <input
+                    placeholder="entremets Ø18 cm"
+                    className="gourmand-input flex-1"
+                    value={yieldLabel} onChange={e => setYieldLabel(e.target.value)}
+                  />
                 </div>
               </div>
 
