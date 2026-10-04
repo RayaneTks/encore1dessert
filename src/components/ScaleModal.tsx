@@ -341,7 +341,7 @@ export const ScaleModal: React.FC<Props> = ({
                 </div>
               </div>
               <p className="text-xs text-gourmand-biscuit">
-                Saisissez la quantité dont vous disposez : les autres ingrédients sont ajustés proportionnellement.
+                Indiquez ce que vous avez : le reste s’ajuste tout seul.
               </p>
             </>
           )}
@@ -396,7 +396,7 @@ export const ScaleModal: React.FC<Props> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">
-                Coût matières
+                Coût des ingrédients
               </p>
               <p className="text-lg font-bold text-gourmand-chocolate">{fmt(totalCost)}</p>
             </div>

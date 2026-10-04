@@ -52,6 +52,12 @@ public/
 * **Offres (bundles)**: `BundleOfferRule[]` in localStorage (`loadBundleRules` / `saveBundleRules`); used at sale time; commande → vente uses `buildCommandeSaleAllocations` + `frozenRevenue` for `addHistoryEntry`.
 * **Propagation**: Changing an ingredient price auto-recalculates all bases and desserts that use it
 
+## 🗣️ Vocabulaire UI (client non technique)
+Libellés visibles : onglets **Ventes** (ex-Compta), **Commandes** (ex-Ordres), **Caisse**, **Recettes**, **Préparations** (bases), **Ingrédients** (matières premières). Pas de jargon (ticket, dashboard, snapshot, Supabase) ni de TTC dans l'UI. Textes courts : un libellé + au plus une ligne d'aide. Les noms de code (`history`, `commandes`, `Base`) ne changent pas.
+
+## 🔒 Pas de référencement
+App interne : `public/robots.txt` (Disallow all), meta `robots` noindex dans `index.html`, en-tête `X-Robots-Tag` via `vercel.json`. Ne pas retirer.
+
 ## 🗄️ Supabase Schema
 
 Tables: `raw_ingredients`, `bases`, `base_components`, `desserts`, `dessert_components`, `history_entries`, `commandes`

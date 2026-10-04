@@ -164,7 +164,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
       {ingredients.length === 0 && bases.length === 0 && (
         <div className="px-4 mb-4">
           <div className="bg-amber-50 text-amber-700 border border-amber-200/60 p-4 rounded-2xl text-sm font-medium">
-            💡 Ajoutez d'abord des matières premières pour pouvoir créer une recette.
+            💡 Ajoutez d'abord des ingrédients pour créer une recette.
           </div>
         </div>
       )}
@@ -354,7 +354,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
               <ChefHat size={32} className="text-gourmand-cocoa" />
             </div>
             <p className="font-medium">Aucune recette</p>
-            <p className="text-sm text-gourmand-biscuit mt-1">Commencez par ajouter vos matières premières</p>
+            <p className="text-sm text-gourmand-biscuit mt-1">Commencez par ajouter vos ingrédients</p>
           </div>
         )}
       </div>
@@ -475,7 +475,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
                 <div>
                   <h4 className="text-xs font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Apple size={14} /> Matières premières
+                    <Apple size={14} /> Ingrédients
                   </h4>
                   <div className="space-y-2">
                     {ingredients.map(i => {

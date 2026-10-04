@@ -10,12 +10,12 @@ interface BottomNavProps {
 }
 
 const tabs: { id: Tab; label: string; icon: React.FC<any> }[] = [
-  { id: 'history', label: 'Compta', icon: LayoutDashboard },
-  { id: 'commandes', label: 'Ordres', icon: ClipboardList },
-  { id: 'calculate', label: 'Vendre', icon: Calculator },
+  { id: 'history', label: 'Ventes', icon: LayoutDashboard },
+  { id: 'commandes', label: 'Commandes', icon: ClipboardList },
+  { id: 'calculate', label: 'Caisse', icon: Calculator },
   { id: 'desserts', label: 'Recettes', icon: ChefHat },
-  { id: 'bases', label: 'Bases', icon: Beaker },
-  { id: 'ingredients', label: 'Matières', icon: Apple },
+  { id: 'bases', label: 'Préparations', icon: Beaker },
+  { id: 'ingredients', label: 'Ingrédients', icon: Apple },
 ];
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {

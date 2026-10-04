@@ -102,7 +102,7 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
       className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
-        title="Matières Premières"
+        title="Ingrédients"
         description={`${ingredients.length} ingrédient${ingredients.length > 1 ? 's' : ''} référencé${ingredients.length > 1 ? 's' : ''}`}
         action={
           <IconActionButton onClick={openAdd} icon={<Plus size={22} />} label="Ajouter une matière première" />
@@ -113,7 +113,7 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, onSave, onDele
         <div className="gourmand-input flex items-center gap-3 bg-white shadow-sm overflow-hidden py-3">
           <Search size={18} className="text-gourmand-biscuit flex-shrink-0" />
           <input
-            placeholder="Rechercher une matière..."
+            placeholder="Rechercher un ingrédient…"
             className="bg-transparent flex-1 outline-none border-none focus:ring-0 text-sm font-medium"
             value={search}
             onChange={e => setSearch(e.target.value)}

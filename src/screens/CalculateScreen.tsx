@@ -219,14 +219,14 @@ export const CalculateScreen: React.FC<Props> = ({
       <div className="flex h-full min-h-0 flex-col">
         <PageHeader
           title="Caisse"
-          description="Encaissez dès qu’au moins une recette est disponible."
+          description="Ajoutez d’abord un dessert."
         />
         <div className="flex flex-1 flex-col items-center justify-center px-4 pb-32 opacity-50">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gourmand-border/50">
             <Calculator size={32} className="text-gourmand-cocoa" />
           </div>
-          <p className="mb-1 text-lg font-semibold text-gourmand-chocolate">Aucun produit</p>
-          <p className="text-center text-sm font-medium text-gourmand-biscuit">Créez des recettes pour encaisser.</p>
+          <p className="mb-1 text-lg font-semibold text-gourmand-chocolate">Aucun dessert</p>
+          <p className="text-center text-sm font-medium text-gourmand-biscuit">Créez un dessert pour commencer à vendre.</p>
         </div>
       </div>
     );
@@ -236,7 +236,7 @@ export const CalculateScreen: React.FC<Props> = ({
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
         title="Caisse"
-        description="Recherche, panier, encaissement."
+        
       />
 
       <div
@@ -289,7 +289,7 @@ export const CalculateScreen: React.FC<Props> = ({
               type="search"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher un produit…"
+              placeholder="Rechercher un dessert…"
               className="min-h-0 min-w-0 flex-1 border-0 bg-transparent py-0.5 text-base font-medium text-gourmand-chocolate placeholder:text-gourmand-biscuit/60 outline-none focus:outline-none"
               autoComplete="off"
               enterKeyHint="search"
@@ -300,7 +300,7 @@ export const CalculateScreen: React.FC<Props> = ({
 
         <div className="mb-4">
           <label htmlFor="sale-label-caisse" className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">
-            Libellé (compta, optionnel)
+            Note sur la vente (facultatif)
           </label>
           <input
             id="sale-label-caisse"
@@ -308,11 +308,10 @@ export const CalculateScreen: React.FC<Props> = ({
             value={saleLabel}
             onChange={e => setSaleLabel(e.target.value.slice(0, 120))}
             maxLength={120}
-            placeholder="ex. Fête M., Boulangerie X, n° de note…"
+            placeholder="ex. Fête de Marie"
             className="gourmand-input w-full text-base"
             autoComplete="off"
           />
-          <p className="mt-1 text-[10px] text-gourmand-biscuit/80">S’affiche en Dashboard sur ce ticket (toutes les lignes).</p>
         </div>
 
         {/* Panier : zone principale */}

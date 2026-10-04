@@ -47,7 +47,7 @@ export const InstallPrompt: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold tracking-tight mb-2">Installez l'application</h2>
           <p className="text-sm text-gourmand-cocoa/80 leading-relaxed font-medium">
-            Pour une expérience optimale et sécurisée, Encore1Dessert doit être installé sur votre écran d'accueil.
+            Ajoutez Encore 1 Dessert à votre écran d’accueil pour l’ouvrir comme une vraie application.
           </p>
         </div>
 

@@ -91,7 +91,7 @@ export default function App() {
       checkAndFireNotifications(cmds);
     } catch (err) {
       console.error('Fetch error:', err);
-      showToast('Erreur de chargement depuis Supabase', 'error');
+      showToast('Impossible de charger vos données. Vérifiez la connexion.', 'error');
     } finally {
       setLoading(false);
     }

@@ -158,7 +158,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
       {ingredients.length === 0 && (
         <div className="px-4 mb-4">
           <div className="bg-amber-50 text-amber-700 border border-amber-200/60 p-4 rounded-2xl text-sm font-medium">
-            💡 Ajoutez d'abord des matières premières pour créer une préparation.
+            💡 Ajoutez d'abord des ingrédients pour créer une préparation.
           </div>
         </div>
       )}

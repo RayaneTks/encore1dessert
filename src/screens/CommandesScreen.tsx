@@ -681,12 +681,11 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
     >
       <div className="shrink-0">
         <PageHeader
-          brand="Gestion"
-          title="Ordres"
+          title="Commandes"
           description={
             orderedKitchen > 0
-              ? `${pendingCount} attente · ${commandesPourOrdres.length} sur Ordres · ${remainingKitchen} restant cuisine`
-              : `${pendingCount} attente · ${commandesPourOrdres.length} sur Ordres`
+              ? `${pendingCount} à préparer · ${remainingKitchen} dessert${remainingKitchen > 1 ? 's' : ''} à faire`
+              : `${pendingCount} à préparer`
           }
           action={
             <IconActionButton
@@ -1486,7 +1485,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
         {deleteTarget && (
           <ConfirmDialog
             title="Supprimer cette commande ?"
-            message={`La fiche commande de ${deleteTarget.clientName} sera supprimée de Ordres. Les ventes déjà enregistrées en compta (tickets) ne sont pas supprimées ni modifiées.`}
+            message={`La fiche commande de ${deleteTarget.clientName} sera supprimée. Les ventes déjà enregistrées restent dans « Ventes ».`}
             onConfirm={confirmDelete}
             onCancel={() => setDeleteTarget(null)}
           />
@@ -1498,7 +1497,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
           <Modal title="Marquer comme livrée ?" onClose={() => !converting && setDeliverTarget(null)}>
             <div className="p-5 space-y-5">
               <p className="text-sm text-gourmand-cocoa/75 font-medium leading-relaxed">
-                Enregistrer cette commande comme vente dans le Dashboard ?
+                Ajouter cette commande aux ventes ?
               </p>
               <div className="bg-gourmand-bg rounded-xl p-3 space-y-1.5">
                 {mergeCommandeItems(deliverTarget.items).map((item, i) => (
@@ -1514,7 +1513,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                 disabled={converting}
                 className="gourmand-btn-primary-compact w-full cursor-pointer disabled:cursor-not-allowed"
               >
-                {converting ? 'Enregistrement…' : 'Enregistrer + Livrer'}
+                {converting ? 'Enregistrement…' : 'Livrer et ajouter aux ventes'}
               </button>
               <button
                 type="button"
@@ -1522,7 +1521,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                 disabled={converting}
                 className="w-full rounded-lg border border-gourmand-border bg-white py-2.5 text-xs font-semibold text-gourmand-cocoa active:bg-gourmand-bg disabled:opacity-40 transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
-                Livrer uniquement (sans vente)
+                Livrer sans l’ajouter aux ventes
               </button>
             </div>
           </Modal>
