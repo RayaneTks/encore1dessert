@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Scale,
   CheckCheck,
+  ShoppingBasket,
 } from 'lucide-react';
 import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert, RawIngredient, Base, ShowToastOptions, BundleOfferRule } from '../types';
 import { buildCommandeSaleAllocations } from '../lib/deliveryBundle';
@@ -24,6 +25,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
 import { ScaleModal } from '../components/ScaleModal';
+import { ShoppingListView } from '../components/ShoppingListView';
 import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow, FilterField, FilterPillRow, FilterSortByCustomer } from '../components/FilterControls';
 import {
   requestNotificationPermission,
@@ -67,7 +69,7 @@ interface Props {
   showToast: (msg: string, type?: 'success' | 'error' | 'info', opts?: ShowToastOptions) => void;
 }
 
-type ScreenTab = 'commandes' | 'cuisine';
+type ScreenTab = 'commandes' | 'cuisine' | 'courses';
 
 const STATUS_LABEL: Record<CommandeStatus, string> = {
   pending: 'En attente',
@@ -727,29 +729,27 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
           }
         />
 
-        <div className="px-4 pb-3 flex gap-2">
+        <div className="px-4 pb-3 flex gap-1.5">
           <button
             type="button"
             onClick={() => setScreenTab('commandes')}
-            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 px-2 text-sm font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
+            className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl py-3 px-1 text-[13px] font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
               screenTab === 'commandes'
                 ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
                 : 'bg-white text-gourmand-cocoa border-gourmand-border'
             }`}
           >
-            <ClipboardList size={18} className="shrink-0" aria-hidden />
             <span className="truncate">Commandes</span>
           </button>
           <button
             type="button"
             onClick={() => setScreenTab('cuisine')}
-            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 pl-2 pr-3 text-sm font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
+            className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl py-3 px-1 text-[13px] font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
               screenTab === 'cuisine'
                 ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
                 : 'bg-white text-gourmand-cocoa border-gourmand-border'
             }`}
           >
-            <ChefHat size={18} className="shrink-0" aria-hidden />
             <span className="truncate">Cuisine</span>
             {remainingKitchen > 0 && (
               <span
@@ -761,10 +761,25 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setScreenTab('courses')}
+            className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl py-3 px-1 text-[13px] font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
+              screenTab === 'courses'
+                ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
+                : 'bg-white text-gourmand-cocoa border-gourmand-border'
+            }`}
+          >
+            <span className="truncate">Courses</span>
+          </button>
         </div>
       </div>
 
       <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide px-2 pb-32">
+        {screenTab === 'courses' && (
+          <ShoppingListView commandes={commandes} desserts={desserts} bases={bases} ingredients={ingredients} showToast={showToast} />
+        )}
+
         {screenTab === 'commandes' && (
           <motion.div
             key="commandes-tab"

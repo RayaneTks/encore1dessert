@@ -89,6 +89,7 @@ Tailwind CSS v4 with `@theme` directive. Two card variants:
 * **ConfirmDialog** has no `isOpen` prop — wrap in `<AnimatePresence>` and conditionally render
 * **BottomNav** : 5 emplacements — Commandes, Atelier, **Caisse (centre, en relief)**, Ventes, Réglages. « Atelier » (`AtelierScreen`) regroupe Desserts / Préparations / Ingrédients (sous-onglets, dernière section mémorisée). Les tabs `desserts|bases|ingredients` existent toujours dans `Tab`. Ne pas ajouter d'onglet : mettre la fonctionnalité dans une section existante.
 * **Création rapide** : `QuantityPicker` (recherche, éléments choisis en tête) + `IngredientModal` permettent de créer un ingrédient depuis le formulaire d'une préparation ou d'un dessert sans le quitter.
+* **Courses** (Commandes › Courses) : `lib/shoppingList.ts` additionne les ingrédients des desserts restant à fabriquer (commandes non livrées moins `producedQty`), bases dépliées proportionnellement ; un dessert commandé = 1 fois sa recette (même convention que le coût à la vente). Cases à cocher mémorisées en local (`e1d_courses_checked`).
 * **Caisse** : grille de tuiles 2 colonnes (toucher = ajouter, badge = quantité, − sur la tuile), panier repliable dans la barre d'encaissement.
 * **Notifications** are local only (fire on app open). Background push requires VAPID + server — not implemented
 * **SectionCard** uses `mb-0` — spacing handled by parent `space-y-*`. Do NOT add `mb-6` back; all screens use `space-y-3` or `space-y-4` containers
