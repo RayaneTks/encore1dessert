@@ -24,6 +24,27 @@
     color: var(--color-gourmand-chocolate);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Comportement « app » : pas de sélection de texte dans l'interface, sauf dans les champs */
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* iOS zoome sur tout champ < 16 px au focus : on l'évite sur écran tactile */
+  @media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 
   ::selection {

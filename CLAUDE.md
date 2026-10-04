@@ -56,7 +56,7 @@ public/
 Libellés visibles : onglets **Ventes** (ex-Compta), **Commandes** (ex-Ordres), **Caisse**, **Recettes**, **Préparations** (bases), **Ingrédients** (matières premières). Pas de jargon (ticket, dashboard, snapshot, Supabase) ni de TTC dans l'UI. Textes courts : un libellé + au plus une ligne d'aide. Les noms de code (`history`, `commandes`, `Base`) ne changent pas.
 
 ## 🖼️ Images (`public/`)
-`apple-touch-icon.png` (180), `icon-192/512.png`, `icon-maskable-512.png`, `favicon-16/32.png`, `badge-96.png` (silhouette blanche pour les notifications). Icônes plein cadre carré, sans coins arrondis ni transparence (iOS/Android appliquent leur masque). Logo affiché dans l'app : `src/assets/logo.webp`.
+`apple-touch-icon.png` (180), `icon-192/512.png`, `icon-maskable-512.png`, `favicon-16/32.png`, `badge-96.png` (silhouette blanche pour les notifications). Icônes plein cadre carré, sans coins arrondis ni transparence (iOS/Android appliquent leur masque). Logo affiché dans l'app : `src/assets/logo.webp` (copie dans `public/logo.webp` pour l'écran de démarrage HTML). Écrans de lancement iOS : `public/splash/*` (12 tailles d'iPhone, fond #FDF8F2 + logo centré) référencés par `apple-touch-startup-image` dans `index.html`. `public/sw.js` met l'interface en cache (hors-ligne) mais jamais les données Supabase.
 
 ## 🔒 Pas de référencement
 App interne : `public/robots.txt` (Disallow all), meta `robots` noindex dans `index.html`, en-tête `X-Robots-Tag` via `vercel.json`. Ne pas retirer.

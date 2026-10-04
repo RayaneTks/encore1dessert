@@ -372,10 +372,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="app-container flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-gourmand-chocolate border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="font-semibold text-gourmand-biscuit text-sm">Chargement...</p>
-        </div>
+        <img src="/logo.webp" alt="Encore 1 Dessert" className="h-auto w-[62%] max-w-[300px] animate-pulse" />
       </div>
     );
   }
@@ -391,7 +388,6 @@ export default function App() {
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="w-8 h-8 border-4 border-gourmand-chocolate border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-xs font-semibold text-gourmand-biscuit">Chargement de l'écran...</p>
               </div>
             </div>
           }
