@@ -52,10 +52,8 @@ export const ScaleModal: React.FC<Props> = ({
   onSaveVariant,
 }) => {
   const baseServings = target.type === 'dessert' ? target.item.servings : 1;
-  const initialMultiplier =
-    initialQuantity && initialQuantity > 0 && target.type === 'dessert'
-      ? initialQuantity / baseServings
-      : initialQuantity ?? 1;
+  // Une quantité commandée = autant de fois la recette du dessert (comme pour le coût à la vente et la liste de courses).
+  const initialMultiplier = initialQuantity && initialQuantity > 0 ? initialQuantity : 1;
 
   const [multiplier, setMultiplier] = useState<number>(() =>
     Math.max(0.5, Math.min(50, initialMultiplier)),
