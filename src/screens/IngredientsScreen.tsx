@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight } from 'lucide-react';
 import { Base, Dessert, RawIngredient } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
-import { IngredientModal } from '../components/IngredientModal';
+import { IngredientModal, INGREDIENT_CATEGORIES } from '../components/IngredientModal';
+import { SearchField } from '../components/SearchField';
 import { fmt } from '../lib/calculations';
 
 interface Props {
@@ -43,6 +44,13 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, bases, dessert
     return map;
   }, [bases, desserts]);
 
+  const groups = useMemo(() => {
+    const rank = (c: string) => { const i = INGREDIENT_CATEGORIES.indexOf(c); return i === -1 ? INGREDIENT_CATEGORIES.length : i; };
+    const m = new Map<string, RawIngredient[]>();
+    [...filtered].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })).forEach(i => m.set(i.category, [...(m.get(i.category) ?? []), i]));
+    return [...m.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b, 'fr'));
+  }, [filtered]);
+
   const openAdd = () => { setEditItem(null); setFormOpen(true); };
   const openEdit = (ing: RawIngredient) => { setEditItem(ing); setFormOpen(true); };
 
@@ -64,55 +72,52 @@ export const IngredientsScreen: React.FC<Props> = ({ ingredients, bases, dessert
         title="Ingrédients"
         description={`${ingredients.length} ingrédient${ingredients.length > 1 ? 's' : ''}`}
         action={<IconActionButton onClick={openAdd} icon={<Plus size={22} />} label="Ajouter un ingrédient" />}
-      />
+      >
+        {<SearchField value={search} onChange={setSearch} placeholder="Rechercher un ingrédient…" />}
+      </PageHeader>
 
-      <div className="px-4 mb-4">
-        <div className="gourmand-input flex items-center gap-3 bg-white shadow-sm overflow-hidden py-3">
-          <Search size={18} className="text-gourmand-biscuit flex-shrink-0" />
-          <input
-            placeholder="Rechercher un ingrédient…"
-            className="bg-transparent flex-1 outline-none border-none focus:ring-0 text-sm font-medium"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="px-4">
-        <SectionCard padding={false}>
-          <div className="divide-y divide-gourmand-border/50">
-            {filtered.map(ing => {
-              const used = usage.get(ing.id)?.length ?? 0;
-              return (
-                <button
-                  key={ing.id}
-                  onClick={() => openEdit(ing)}
-                  className="w-full p-4 flex items-center justify-between hover:bg-gourmand-bg/50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-2xl flex-shrink-0">{ing.emoji}</span>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-base text-gourmand-chocolate leading-tight truncate mb-0.5">{ing.name}</p>
-                      <p className="text-xs font-medium text-gourmand-biscuit">
-                        {ing.category} · {used > 0 ? `utilisé dans ${used} recette${used > 1 ? 's' : ''}` : 'pas encore utilisé'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-right">
-                      <p className="font-semibold text-gourmand-chocolate">{fmt(ing.pricePerKg)}</p>
-                      <p className="text-[10px] text-gourmand-biscuit">{unitLabel(ing.unit)}</p>
-                    </div>
-                    <ChevronRight size={16} className="text-gourmand-biscuit" />
-                  </div>
-                </button>
-              );
-            })}
-            {filtered.length === 0 && (
-              <div className="p-8 text-center text-sm font-medium text-gourmand-biscuit">Aucun ingrédient trouvé</div>
+      <div className="space-y-5 px-4 pt-1">
+        {groups.map(([category, items]) => (
+          <section key={category} aria-label={category}>
+            {!search.trim() && (
+              <h2 className="mb-2 pl-1 text-xs font-bold uppercase tracking-widest text-gourmand-cocoa/60">{category} · {items.length}</h2>
             )}
-          </div>
-        </SectionCard>
+            <SectionCard padding={false}>
+              <div className="divide-y divide-gourmand-border/50">
+                {items.map(ing => {
+                  const used = usage.get(ing.id)?.length ?? 0;
+                  return (
+                    <button
+                      key={ing.id}
+                      onClick={() => openEdit(ing)}
+                      className="w-full p-4 flex items-center justify-between hover:bg-gourmand-bg/50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-9 shrink-0 text-center text-2xl">{ing.emoji}</span>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-base text-gourmand-chocolate leading-tight truncate mb-0.5">{ing.name}</p>
+                          <p className="text-xs font-medium text-gourmand-biscuit">
+                            {used > 0 ? `utilisé dans ${used} recette${used > 1 ? 's' : ''}` : 'pas encore utilisé'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="text-right">
+                          <p className="font-semibold text-gourmand-chocolate">{fmt(ing.pricePerKg)}</p>
+                          <p className="text-[10px] text-gourmand-biscuit">{unitLabel(ing.unit)}</p>
+                        </div>
+                        <ChevronRight size={16} className="text-gourmand-biscuit" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          </section>
+        ))}
+        {filtered.length === 0 && (
+          <div className="p-8 text-center text-sm font-medium text-gourmand-biscuit">Aucun ingrédient ne correspond à « {search} ».</div>
+        )}
       </div>
 
       <AnimatePresence>

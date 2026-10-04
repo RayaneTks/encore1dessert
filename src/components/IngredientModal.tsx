@@ -4,7 +4,7 @@ import { RawIngredient } from '../types';
 import { Modal } from './Modal';
 import { FormLabel } from './FormLabel';
 
-export const INGREDIENT_CATEGORIES = ['Crèmerie', 'Élevage', 'Épicerie', 'Fruits secs', 'Chocolat', 'Autre'];
+export const INGREDIENT_CATEGORIES = ['Crèmerie', 'Élevage', 'Épicerie', 'Chocolat', 'Fruits', 'Fruits secs', 'Autre'];
 
 interface Props {
   /** null = nouvel ingrédient */

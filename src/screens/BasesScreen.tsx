@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
 import { ScaleModal } from '../components/ScaleModal';
+import { SearchField } from '../components/SearchField';
 import { QuantityPicker } from '../components/QuantityPicker';
 import { IngredientModal } from '../components/IngredientModal';
 import { fmt, findIngredient, calculateBaseCost, calculateBaseCostPerKg } from '../lib/calculations';
@@ -38,6 +39,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
   const [deleteTarget, setDeleteTarget] = useState<Base | null>(null);
   const [scaleTarget, setScaleTarget] = useState<Base | null>(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState('');
   const [newIngOpen, setNewIngOpen] = useState(false);
   const [newIngName, setNewIngName] = useState('');
   /** Famille ouverte (liste de ses variantes). null = liste générale. */
@@ -134,7 +136,14 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
   // Si la dernière variante est supprimée / déplacée, on revient à la liste générale.
   const familyBases = openFamily !== null ? bases.filter(b => b.family === openFamily) : [];
   const effectiveFamily = openFamily !== null && familyBases.length > 0 ? openFamily : null;
-  const visibleBases = effectiveFamily !== null ? familyBases : standalone;
+  const q = query.trim().toLowerCase();
+  const categoryRank = (c: string) => { const i = CATEGORIES.indexOf(c); return i === -1 ? CATEGORIES.length : i; };
+  const visibleBases = useMemo(() => {
+    const pool = q ? bases.filter(b => b.name.toLowerCase().includes(q) || b.category.toLowerCase().includes(q) || b.family.toLowerCase().includes(q))
+      : effectiveFamily !== null ? familyBases : standalone;
+    return [...pool].sort((a, b) => categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bases, q, effectiveFamily, familyBases, standalone]);
 
   return (
     <motion.div
@@ -158,7 +167,9 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
             disabled={ingredients.length === 0}
           />
         }
-      />
+      >
+        {effectiveFamily === null && <SearchField value={query} onChange={setQuery} placeholder="Rechercher une préparation…" />}
+      </PageHeader>
 
       {ingredients.length === 0 && (
         <div className="px-4 mb-4">
@@ -179,7 +190,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
           </button>
         )}
 
-        {effectiveFamily === null && families.map(([fam, members]) => (
+        {effectiveFamily === null && !q && families.map(([fam, members]) => (
           <button
             key={fam}
             type="button"
@@ -199,13 +210,18 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
           </button>
         ))}
 
-        {visibleBases.map(base => {
+        {visibleBases.map((base, i) => {
           const { totalCost, totalWeight } = calculateBaseCost(base, ingredients);
           const costPerKg = calculateBaseCostPerKg(base, ingredients);
           const isExpanded = expandedId === base.id;
 
+          const showHeading = !q && effectiveFamily === null && (i === 0 || visibleBases[i - 1].category !== base.category);
           return (
-            <div key={base.id} className="gourmand-card overflow-hidden">
+            <React.Fragment key={base.id}>
+            {showHeading && (
+              <h2 className="pl-1 pt-2 text-xs font-bold uppercase tracking-widest text-gourmand-cocoa/60">{base.category}</h2>
+            )}
+            <div className="gourmand-card overflow-hidden">
               {/* En-tête : toute la ligne ouvre le détail */}
               <button
                 type="button"
@@ -299,8 +315,13 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                 )}
               </AnimatePresence>
             </div>
+            </React.Fragment>
           );
         })}
+
+        {bases.length > 0 && visibleBases.length === 0 && q && (
+          <p className="py-10 text-center text-sm font-medium text-gourmand-biscuit">Aucune préparation ne correspond à « {query} ».</p>
+        )}
 
         {bases.length === 0 && (
           <div className="text-center py-16 opacity-50">

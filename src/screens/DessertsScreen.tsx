@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
 import { ScaleModal } from '../components/ScaleModal';
+import { SearchField } from '../components/SearchField';
 import { QuantityPicker } from '../components/QuantityPicker';
 import { IngredientModal } from '../components/IngredientModal';
 import {
@@ -39,6 +40,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
   const [deleteTarget, setDeleteTarget] = useState<Dessert | null>(null);
   const [scaleTarget, setScaleTarget] = useState<Dessert | null>(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState('');
   const [newIngOpen, setNewIngOpen] = useState(false);
   const [newIngName, setNewIngName] = useState('');
 
@@ -126,6 +128,16 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
     return '#ef4444';
   };
 
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const order = ['tarte', 'flan', 'tiramisu', 'autre'];
+    return desserts
+      .filter(d => !q || d.name.toLowerCase().includes(q))
+      .sort((a, b) =>
+        order.indexOf(a.productKind ?? 'tarte') - order.indexOf(b.productKind ?? 'tarte') ||
+        a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+  }, [desserts, query]);
+
   const liveCost = useMemo(() => {
     let cost = 0;
     Object.entries(compMap).forEach(([id, c]) => {
@@ -162,10 +174,12 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
             disabled={ingredients.length === 0 && bases.length === 0}
             onClick={openAdd}
             icon={<Plus size={22} />}
-            label="Ajouter une recette"
+            label="Ajouter un dessert"
           />
         }
-      />
+      >
+        {<SearchField value={query} onChange={setQuery} placeholder="Rechercher un dessert…" />}
+      </PageHeader>
 
       {ingredients.length === 0 && bases.length === 0 && (
         <div className="px-4 mb-4">
@@ -176,7 +190,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
       )}
 
       <div className="px-4 space-y-3">
-        {desserts.map(d => {
+        {visible.map((d, i) => {
           const cost = calculateDessertCost(d, ingredients, bases);
           const margin = d.sellPriceParticulier - cost;
           const marginRate = d.sellPriceParticulier > 0 ? margin / d.sellPriceParticulier : 0;
@@ -187,8 +201,13 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
           const isExpanded = expandedId === d.id;
           const kindLabel = DESSERT_PRODUCT_KIND_OPTIONS.find(k => k.value === (d.productKind ?? 'tarte'))?.label ?? d.productKind;
 
+          const showHeading = !query.trim() && (i === 0 || (visible[i - 1].productKind ?? 'tarte') !== (d.productKind ?? 'tarte'));
           return (
-            <div key={d.id} className="gourmand-card overflow-hidden">
+            <React.Fragment key={d.id}>
+            {showHeading && (
+              <h2 className="pl-1 pt-2 text-xs font-bold uppercase tracking-widest text-gourmand-cocoa/60">{kindLabel}s</h2>
+            )}
+            <div className="gourmand-card overflow-hidden">
               {/* En-tête : toute la ligne ouvre le détail */}
               <button
                 type="button"
@@ -316,8 +335,13 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                 )}
               </AnimatePresence>
             </div>
+            </React.Fragment>
           );
         })}
+
+        {desserts.length > 0 && visible.length === 0 && (
+          <p className="py-10 text-center text-sm font-medium text-gourmand-biscuit">Aucun dessert ne correspond à « {query} ».</p>
+        )}
 
         {desserts.length === 0 && (
           <div className="text-center py-16 opacity-50">
