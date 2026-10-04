@@ -206,45 +206,26 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
 
           return (
             <div key={base.id} className="gourmand-card overflow-hidden">
-              {/* Header toujours visible */}
-              <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-                <div className="w-11 h-11 rounded-xl bg-gourmand-bg flex items-center justify-center text-2xl border border-gourmand-border/50 shrink-0">
-                  {base.emoji}
-                </div>
+              {/* En-tête : toute la ligne ouvre le détail */}
+              <button
+                type="button"
+                onClick={() => setExpandedId(isExpanded ? null : base.id)}
+                aria-expanded={isExpanded}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-gourmand-bg/60"
+              >
+                <span className="w-10 shrink-0 text-center text-3xl leading-none">{base.emoji}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[15px] text-gourmand-chocolate leading-tight truncate">{base.name}</p>
-                  <p className="text-[10px] font-semibold text-gourmand-biscuit uppercase tracking-wide mt-0.5">
-                    {base.category} · {base.components.length} composant{base.components.length > 1 ? 's' : ''}
+                  <p className="line-clamp-2 text-[15px] font-semibold leading-tight text-gourmand-chocolate">{base.name}</p>
+                  <p className="mt-0.5 text-xs font-medium text-gourmand-biscuit">
+                    {base.category} · {base.components.length} ingrédient{base.components.length > 1 ? 's' : ''}
                   </p>
                 </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right">
-                    <p className="font-bold text-base text-gourmand-chocolate tabular-nums">{fmt(costPerKg)}</p>
-                    <p className="text-[10px] font-semibold text-gourmand-biscuit uppercase">/kg</p>
-                  </div>
-
-                  {/* Scale — toujours visible */}
-                  <button
-                    type="button"
-                    onClick={e => { e.stopPropagation(); setScaleTarget(base); }}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-gourmand-border bg-gourmand-bg text-gourmand-biscuit transition-colors active:bg-gourmand-border"
-                    aria-label={`Adapter la préparation ${base.name}`}
-                  >
-                    <Scale size={16} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : base.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-gourmand-border bg-gourmand-bg transition-colors active:bg-gourmand-border"
-                    aria-label={isExpanded ? 'Réduire' : 'Voir le détail'}
-                    aria-expanded={isExpanded}
-                  >
-                    <ChevronDown size={16} className={`text-gourmand-biscuit transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                  </button>
+                <div className="shrink-0 text-right">
+                  <p className="text-base font-bold tabular-nums text-gourmand-chocolate">{fmt(costPerKg)}</p>
+                  <p className="text-xs font-medium text-gourmand-biscuit">le kilo</p>
                 </div>
-              </div>
+                <ChevronDown size={18} className={`shrink-0 text-gourmand-biscuit transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+              </button>
 
               {/* Accordéon */}
               <AnimatePresence>
@@ -258,7 +239,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                   >
                     <div className="px-4 pb-4 pt-2 space-y-3 border-t border-gourmand-border/60">
                       <div className="bg-gourmand-bg rounded-xl p-4 space-y-2.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gourmand-biscuit mb-2">Composition</p>
+                        <p className="text-xs font-semibold text-gourmand-biscuit mb-2">Composition</p>
                         {base.components.map((comp, idx) => {
                           const ing = findIngredient(ingredients, comp.ingredientId);
                           const ingName = ing?.name || 'Inconnu';
@@ -279,7 +260,7 @@ export const BasesScreen: React.FC<Props> = ({ bases, ingredients, onSave, onDel
                           );
                         })}
                         <div className="border-t border-gourmand-border/60 pt-2.5 mt-1 flex justify-between">
-                          <span className="text-xs font-semibold text-gourmand-cocoa uppercase">Rendement : {totalWeight}g</span>
+                          <span className="text-sm font-semibold text-gourmand-cocoa">Total : {totalWeight} g</span>
                           <span className="font-bold tabular-nums">{fmt(totalCost)}</span>
                         </div>
                       </div>

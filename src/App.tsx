@@ -423,6 +423,7 @@ export default function App() {
                 onDeleteBase={handleDeleteBase}
                 onSaveIngredient={handleSaveIngredient}
                 onDeleteIngredient={handleDeleteIngredient}
+                targetMargin={targetMargin}
                 showToast={showToast}
               />
             )}

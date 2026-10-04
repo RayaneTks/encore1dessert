@@ -19,6 +19,7 @@ interface Props {
   onDeleteBase: (id: string) => Promise<void>;
   onSaveIngredient: (i: RawIngredient) => Promise<RawIngredient | null>;
   onDeleteIngredient: (id: string) => Promise<void>;
+  targetMargin: number;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
@@ -28,7 +29,7 @@ interface Props {
  */
 export const AtelierScreen: React.FC<Props> = ({
   section, onSectionChange, desserts, bases, ingredients,
-  onSaveDessert, onDeleteDessert, onSaveBase, onDeleteBase, onSaveIngredient, onDeleteIngredient, showToast,
+  onSaveDessert, onDeleteDessert, onSaveBase, onDeleteBase, onSaveIngredient, onDeleteIngredient, targetMargin, showToast,
 }) => {
   const sections: { id: AtelierSection; label: string; count: number }[] = [
     { id: 'desserts', label: 'Desserts', count: desserts.length },
@@ -68,6 +69,7 @@ export const AtelierScreen: React.FC<Props> = ({
               onSave={onSaveDessert}
               onDelete={onDeleteDessert}
               onSaveIngredient={onSaveIngredient}
+              targetMargin={targetMargin}
               showToast={showToast}
             />
           )}

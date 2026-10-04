@@ -28,10 +28,11 @@ interface Props {
   onSave: (dessert: Dessert) => Promise<Dessert | null>;
   onDelete: (id: string) => Promise<void>;
   onSaveIngredient: (ing: RawIngredient) => Promise<RawIngredient | null>;
+  targetMargin: number;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, onSave, onDelete, onSaveIngredient, showToast }) => {
+export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, onSave, onDelete, onSaveIngredient, targetMargin, showToast }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Dessert | null>(null);
@@ -188,64 +189,34 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
 
           return (
             <div key={d.id} className="gourmand-card overflow-hidden">
-              {/* Card header — toujours visible */}
-              <div className="flex items-center gap-1 px-4 pt-4 pb-3">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-2xl shrink-0">{d.emoji}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[15px] text-gourmand-chocolate leading-tight truncate">{d.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <span className="rounded-md bg-gourmand-bg px-1.5 py-0.5 text-[10px] font-semibold text-gourmand-cocoa border border-gourmand-border/50">
-                        {kindLabel}
-                      </span>
-                      <span className="text-[10px] text-gourmand-biscuit font-medium">{d.servings} parts</span>
-                      <span className="text-[10px] text-gourmand-border">·</span>
-                      <span className="text-[10px] text-gourmand-biscuit font-medium">×{coeff.toFixed(1)}</span>
-                    </div>
+              {/* En-tête : toute la ligne ouvre le détail */}
+              <button
+                type="button"
+                onClick={() => setExpandedId(isExpanded ? null : d.id)}
+                aria-expanded={isExpanded}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-gourmand-bg/60"
+              >
+                <span className="w-10 shrink-0 text-center text-3xl leading-none">{d.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-[15px] font-semibold leading-tight text-gourmand-chocolate">{d.name}</p>
+                  <p className="mt-0.5 text-xs font-medium text-gourmand-biscuit">
+                    {kindLabel} · {d.servings} part{d.servings > 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-base font-bold tabular-nums text-gourmand-chocolate">{fmt(d.sellPriceParticulier)}</p>
+                  <p className={`text-xs font-bold tabular-nums ${marginColor(marginRate)}`}>
+                    {cost > 0 ? `+${fmt(margin)}` : 'à compléter'}
+                  </p>
+                  <div className="margin-bar-track mt-1 ml-auto w-14">
+                    <div
+                      className="margin-bar-fill"
+                      style={{ width: `${Math.min(100, Math.max(0, marginRate * 100))}%`, backgroundColor: marginBarColor(marginRate) }}
+                    />
                   </div>
                 </div>
-
-                {/* Prix + marge + boutons d'action */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right">
-                    <p className="font-bold text-base text-gourmand-chocolate">{fmt(d.sellPriceParticulier)}</p>
-                    <p className={`text-[10px] font-bold ${marginColor(marginRate)}`}>
-                      {(marginRate * 100).toFixed(0)}%
-                    </p>
-                    {/* Barre de marge visuelle */}
-                    <div className="margin-bar-track w-16 mt-1">
-                      <div
-                        className="margin-bar-fill"
-                        style={{
-                          width: `${Math.min(100, Math.max(0, marginRate * 100))}%`,
-                          backgroundColor: marginBarColor(marginRate),
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Bouton Scale — toujours visible */}
-                  <button
-                    type="button"
-                    onClick={e => { e.stopPropagation(); setScaleTarget(d); }}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-gourmand-border bg-gourmand-bg text-gourmand-biscuit transition-colors active:bg-gourmand-border shrink-0"
-                    aria-label={`Adapter la recette ${d.name}`}
-                  >
-                    <Scale size={16} />
-                  </button>
-
-                  {/* Chevron expand */}
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : d.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-gourmand-border bg-gourmand-bg transition-colors active:bg-gourmand-border shrink-0"
-                    aria-label={isExpanded ? 'Réduire' : 'Voir le détail'}
-                    aria-expanded={isExpanded}
-                  >
-                    <ChevronDown size={16} className={`text-gourmand-biscuit transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                  </button>
-                </div>
-              </div>
+                <ChevronDown size={18} className={`shrink-0 text-gourmand-biscuit transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+              </button>
 
               {/* Accordéon détail */}
               <AnimatePresence>
@@ -258,37 +229,32 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                     className="overflow-hidden"
                   >
                     <div className="px-4 pb-4 pt-1 space-y-3 border-t border-gourmand-border/60">
-                      {/* Grid stats */}
-                      <div className="grid grid-cols-3 gap-2 pt-2">
+                      {cost > 0 && marginRate < targetMargin && (
+                        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-900">
+                          Pour garder {Math.round(targetMargin * 100)} % de marge, vendez à <strong>{fmt(cost / (1 - targetMargin))}</strong> (actuellement {fmt(d.sellPriceParticulier)}).
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
-                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coût unitaire</p>
-                          <p className="font-bold text-sm">{fmt(cost)}</p>
+                          <p className="text-xs font-semibold text-gourmand-biscuit mb-0.5">Coût de revient</p>
+                          <p className="font-bold text-base tabular-nums">{fmt(cost)}</p>
+                          <p className="text-[11px] text-gourmand-biscuit">{fmt(costPerServing)} / part</p>
                         </div>
                         <div className="bg-gourmand-bg rounded-xl p-3 text-center">
-                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Marge Part.</p>
-                          <p className={`font-bold text-sm ${marginColor(marginRate)}`}>{fmt(margin)}</p>
+                          <p className="text-xs font-semibold text-gourmand-biscuit mb-0.5">Bénéfice particulier</p>
+                          <p className={`font-bold text-base tabular-nums ${marginColor(marginRate)}`}>{fmt(margin)}</p>
+                          <p className="text-[11px] text-gourmand-biscuit">{(marginRate * 100).toFixed(0)} % · vendu {fmt(d.sellPriceParticulier)}</p>
                         </div>
-                        <div className="bg-gourmand-bg rounded-xl p-3 text-center">
-                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Marge Pro</p>
-                          <p className={`font-bold text-sm ${marginColor(proMarginRate)}`}>{fmt(proMargin)}</p>
-                        </div>
-                        <div className="bg-gourmand-bg rounded-xl p-3 text-center">
-                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coût / part</p>
-                          <p className="font-bold text-sm">{fmt(costPerServing)}</p>
-                        </div>
-                        <div className="bg-gourmand-bg rounded-xl p-3 text-center">
-                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Coefficient</p>
-                          <p className="font-bold text-sm">×{coeff.toFixed(1)}</p>
-                        </div>
-                        <div className="bg-gourmand-bg rounded-xl p-3 text-center">
-                          <p className="text-[10px] font-semibold text-gourmand-biscuit mb-0.5">Prix Pro</p>
-                          <p className="font-bold text-sm">{fmt(d.sellPricePro)}</p>
+                        <div className="bg-gourmand-bg rounded-xl p-3 text-center col-span-2">
+                          <p className="text-xs font-semibold text-gourmand-biscuit mb-0.5">Bénéfice pro</p>
+                          <p className={`font-bold text-base tabular-nums ${marginColor(proMarginRate)}`}>{fmt(proMargin)}</p>
+                          <p className="text-[11px] text-gourmand-biscuit">{(proMarginRate * 100).toFixed(0)} % · vendu {fmt(d.sellPricePro)}</p>
                         </div>
                       </div>
 
                       {/* Composition */}
                       <div className="bg-gourmand-bg rounded-xl p-4">
-                        <p className="text-[10px] font-semibold text-gourmand-biscuit uppercase tracking-wide mb-3">Composition</p>
+                        <p className="text-xs font-semibold text-gourmand-biscuit mb-3">Composition</p>
                         <div className="space-y-2.5">
                           {d.components.map((comp, idx) => {
                             const cName = resolveComponentName(comp.type, comp.id, ingredients, bases);
@@ -317,7 +283,7 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
                           })}
                         </div>
                         <div className="border-t border-gourmand-border/60 pt-2.5 mt-3 flex justify-between items-center">
-                          <span className="text-xs font-semibold text-gourmand-cocoa uppercase">Coût total</span>
+                          <span className="text-sm font-semibold text-gourmand-cocoa">Coût total</span>
                           <span className="font-bold tabular-nums">{fmt(cost)}</span>
                         </div>
                       </div>
@@ -358,8 +324,8 @@ export const DessertsScreen: React.FC<Props> = ({ desserts, ingredients, bases, 
             <div className="w-16 h-16 rounded-full bg-gourmand-border/50 flex items-center justify-center mx-auto mb-3">
               <ChefHat size={32} className="text-gourmand-cocoa" />
             </div>
-            <p className="font-medium">Aucune recette</p>
-            <p className="text-sm text-gourmand-biscuit mt-1">Commencez par ajouter vos ingrédients</p>
+            <p className="font-medium">Aucun dessert</p>
+            <p className="text-sm text-gourmand-biscuit mt-1">Touchez + pour créer le premier</p>
           </div>
         )}
       </div>

@@ -122,6 +122,19 @@ function urgencyBadge(deliveryDate: string, status: CommandeStatus): { label: st
   return null;
 }
 
+/** Regroupe la liste par échéance : on voit d'un coup d'œil ce qui est urgent. */
+function dayBucket(deliveryDate: string, status: CommandeStatus): string {
+  if (status === 'delivered') return 'Livrées';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.floor((new Date(deliveryDate + 'T12:00:00').getTime() - today.getTime()) / 86400000);
+  if (diff < 0) return 'En retard';
+  if (diff === 0) return "Aujourd'hui";
+  if (diff === 1) return 'Demain';
+  if (diff <= 7) return 'Cette semaine';
+  return 'Plus tard';
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
@@ -333,6 +346,22 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
       return a.deliveryDate.localeCompare(b.deliveryDate);
     });
   }, [commandesPourOrdres, filter, customerFilterOrdres]);
+
+  const hasBothTypes = useMemo(
+    () => new Set(commandesPourOrdres.map(c => c.customerType)).size > 1,
+    [commandesPourOrdres],
+  );
+
+  const groups = useMemo(() => {
+    const out: { label: string; items: Commande[] }[] = [];
+    for (const c of filtered) {
+      const label = dayBucket(c.deliveryDate, c.status);
+      const last = out[out.length - 1];
+      if (last && last.label === label) last.items.push(c);
+      else out.push({ label, items: [c] });
+    }
+    return out;
+  }, [filtered]);
 
   const pendingCount = useMemo(
     () => commandesPourOrdres.filter(c => c.status === 'pending').length,
@@ -746,7 +775,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
             <div className="px-2 pb-2 space-y-3">
               <FilterField
                 label="Statut"
-                footer={<FilterSortByCustomer value={customerFilterOrdres} onChange={setCustomerFilterOrdres} />}
+                footer={hasBothTypes ? <FilterSortByCustomer value={customerFilterOrdres} onChange={setCustomerFilterOrdres} /> : undefined}
               >
                 <FilterPillRow
                   options={[
@@ -776,10 +805,10 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               </div>
             )}
             {notifPerm === 'denied' && (
-              <div className="mx-2 mb-3 p-3 rounded-2xl bg-red-50 border border-red-200">
-                <div className="flex gap-2 items-start">
-                  <BellOff size={16} className="text-red-500 shrink-0 mt-0.5" aria-hidden />
-                  <p className="text-xs text-red-700 font-medium">Notifications bloquées (Réglages → Safari).</p>
+              <div className="mx-2 mb-3 rounded-xl bg-gourmand-bg px-3 py-2">
+                <div className="flex gap-2 items-center">
+                  <BellOff size={14} className="text-gourmand-biscuit shrink-0" aria-hidden />
+                  <p className="text-xs text-gourmand-biscuit font-medium">Rappels désactivés. Réactivez-les dans Réglages › Notifications de l’iPhone.</p>
                 </div>
               </div>
             )}
@@ -788,13 +817,18 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               {filtered.length === 0 && (
                 <div className="text-center py-16 text-gourmand-biscuit">
                   <Package size={40} className="mx-auto mb-3 opacity-30" aria-hidden />
-                  <p className="text-sm font-medium">Aucune commande</p>
-                  <p className="text-xs opacity-60 mt-1">+ pour ajouter</p>
+                  <p className="text-sm font-medium">Aucune commande pour le moment</p>
+                  <button type="button" onClick={openNewCommandForm} className="gourmand-btn-primary-compact mt-4 px-5">
+                    Nouvelle commande
+                  </button>
                 </div>
               )}
 
+              {groups.map(group => (
+              <section key={group.label} aria-label={group.label} className="space-y-3">
+                <h2 className={`pl-1 pt-1 text-xs font-bold uppercase tracking-widest ${group.label === 'En retard' ? 'text-red-600' : 'text-gourmand-cocoa/60'}`}>{group.label} · {group.items.length}</h2>
               <AnimatePresence initial={false}>
-                {filtered.map(cmd => {
+                {group.items.map(cmd => {
                   const badge = urgencyBadge(cmd.deliveryDate, cmd.status);
                   const pieces = totalPieces(cmd.items);
                   const prod = producedPieces(cmd.items);
@@ -824,32 +858,25 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                         <div className="flex-1 min-w-0 overflow-hidden">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <span className="font-bold text-sm truncate max-w-full">{cmd.clientName}</span>
+                            {cmd.customerType === 'pro' && (
+                              <span className="gourmand-chip shrink-0 bg-gourmand-chocolate text-white">Pro</span>
+                            )}
+                            {cmd.status !== 'pending' && (
                             <span
                               className={`gourmand-chip shrink-0 ${
-                                cmd.customerType === 'pro'
-                                  ? 'bg-gourmand-chocolate text-white'
-                                  : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
-                              }`}
-                            >
-                              {cmd.customerType === 'pro' ? 'Pro' : 'Particulier'}
-                            </span>
-                            {badge && <span className={`gourmand-chip shrink-0 ${badge.cls}`}>{badge.label}</span>}
-                            <span
-                              className={`gourmand-chip shrink-0 ${
-                                cmd.status === 'pending'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : cmd.status === 'ready'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-emerald-100 text-emerald-700'
+                                cmd.status === 'ready'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-emerald-100 text-emerald-700'
                               }`}
                             >
                               {STATUS_LABEL[cmd.status]}
                             </span>
+                            )}
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gourmand-biscuit">
                             <span className="inline-flex items-center gap-1 shrink-0">
                               <Clock size={10} aria-hidden />
-                              {formatDate(cmd.deliveryDate)}
+                              {new Date(cmd.deliveryDate + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                             </span>
                             <span className="tabular-nums shrink-0">
                               {pieces} pièce{pieces > 1 ? 's' : ''}
@@ -873,6 +900,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                   );
                 })}
               </AnimatePresence>
+              </section>
+              ))}
             </div>
           </motion.div>
         )}
@@ -892,7 +921,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-bold tabular-nums text-gourmand-chocolate leading-tight">
                   {Math.max(0, orderedKitchen - remainingKitchen)}
-                  <span className="text-gourmand-biscuit text-sm font-semibold"> / {orderedKitchen}</span>
+                  <span className="text-gourmand-biscuit text-sm font-semibold"> / {orderedKitchen} desserts faits</span>
                 </p>
                 {orderedKitchen > 0 && (
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gourmand-bg" role="progressbar" aria-valuenow={kitchenPct} aria-valuemin={0} aria-valuemax={100}>
