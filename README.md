@@ -1,23 +1,53 @@
-# Encore 1 Dessert
+# Encore 1 Dessert — Gestion d’une pâtisserie
 
-App interne (PWA mobile) de gestion des coûts, des commandes et des ventes d'une pâtisserie artisanale. Usage privé, non référencé.
+Application métier conçue pour une pâtisserie artisanale : calcul des coûts de fabrication, préparation des commandes et suivi des ventes. L’interface privilégie l’usage sur téléphone et peut être installée comme application web progressive (PWA).
 
-## Démarrer
+L’application est destinée à un usage interne ; le caractère public du dépôt ne donne pas accès aux données métier.
+
+## Fonctionnalités
+
+- Gestion des ingrédients, des préparations et des desserts.
+- Calcul des coûts et recalcul lors de la modification du prix d’un ingrédient.
+- Mise à l’échelle des recettes et organisation de la production.
+- Suivi des commandes et de leur livraison.
+- Enregistrement des ventes avec conservation des prix au moment de la vente.
+
+## Technologies
+
+React 19 · TypeScript · Vite · Tailwind CSS 4 · Motion · Supabase (PostgreSQL).
+
+## Installation
 
 ```bash
-npm install
-cp .env.example .env   # renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
+git clone https://github.com/RayaneTks/encore1dessert.git
+cd encore1dessert
+npm ci
+cp .env.example .env
 npm run dev
 ```
 
-Autres commandes : `npm run build`, `npm run lint` (typage).
+Renseigner `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` avec les valeurs d’un projet Supabase dédié au développement. Utiliser l’URL indiquée par Vite dans le terminal.
 
-## Stack
+Les évolutions SQL versionnées sont dans [`supabase/migrations/`](supabase/migrations/). Pour une nouvelle base, vérifier également le schéma attendu par [`src/lib/db.ts`](src/lib/db.ts) ; les migrations présentes ne remplacent pas nécessairement une initialisation complète.
 
-React 19, TypeScript, Vite, Tailwind CSS v4, Motion, Supabase, déploiement Vercel.
+## Commandes
 
-## Base de données
+```bash
+npm run lint     # Vérifier les types TypeScript
+npm run build    # Vérifier les types et compiler
+npm run preview  # Prévisualiser la version compilée
+```
 
-Les scripts SQL à exécuter dans Supabase sont dans `supabase/migrations/`.
+## Organisation
 
-Guide technique et règles métier : `CLAUDE.md`.
+| Chemin | Rôle |
+|---|---|
+| `src/screens/` | Écrans métier : caisse, atelier, commandes et ventes. |
+| `src/components/` | Navigation, formulaires et composants partagés. |
+| `src/lib/` | Calculs, règles métier et accès aux données. |
+| `src/types/` | Modèles TypeScript. |
+| `public/` | Manifestes, icônes et service worker de la PWA. |
+
+## Documentation
+
+Consulter [`CLAUDE.md`](CLAUDE.md) pour l’architecture, les règles de calcul et la conservation de l’historique des ventes.
